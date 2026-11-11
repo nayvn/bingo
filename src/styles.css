@@ -730,30 +730,168 @@ button:focus-visible {
   display: flex;
   gap: 8px;
 }
-.call-input {
+.turn-banner {
   flex: 1;
   min-width: 0;
   height: 46px;
+  display: grid;
+  place-items: center;
   padding: 0 14px;
-  border: 2px solid var(--border);
+  border: 2px solid var(--line-soft);
   border-radius: 12px;
-  background: var(--surface);
-  font-family: var(--display);
-  font-size: 18px;
-  transition: background 0.2s, border-color 0.2s;
-}
-.call-input:focus,
-.call-input:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-}
-.call-input:disabled {
   background: var(--bg);
-  border-color: var(--line-soft);
+  color: var(--text-soft);
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.call-input.has {
-  background: var(--has-word);
+.turn-banner.mine {
   border-color: var(--primary);
+  background: var(--has-word);
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 17px;
+  animation: glow 1.6s ease-in-out infinite;
+}
+@keyframes glow {
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+}
+
+/* 내 차례: 아직 안 불린 칸을 눌러서 부르기 */
+.cell .pick {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.cell.pickable {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.cell.pickable:hover {
+  background: var(--has-word);
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.cell.pickable:active {
+  transform: scale(0.93);
+}
+
+/* ───────── 쪼기 ───────── */
+.btn.poke {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn.poke.wiggle {
+  animation: wiggle 2.2s ease-in-out infinite;
+}
+@keyframes wiggle {
+  0%,
+  80%,
+  100% {
+    transform: none;
+  }
+  84% {
+    transform: rotate(-7deg);
+  }
+  88% {
+    transform: rotate(6deg);
+  }
+  92% {
+    transform: rotate(-4deg);
+  }
+  96% {
+    transform: rotate(2deg);
+  }
+}
+
+.poke-storm {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  overflow: hidden;
+}
+.poke-bubble {
+  position: absolute;
+  max-width: 80%;
+  padding: 8px 14px;
+  border: 2px solid var(--edge);
+  border-radius: 16px;
+  background: var(--c);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 var(--edge), 0 10px 30px rgb(0 0 0 / 0.5);
+  transform: translate(-50%, -50%) rotate(var(--rot));
+  animation: taunt 2.6s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.poke-bubble.c-y {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.poke-bubble.head {
+  font-size: 24px;
+  padding: 10px 18px;
+  z-index: 1;
+}
+@keyframes taunt {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--rot)) scale(0.2);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--rot)) scale(1.15);
+  }
+  20% {
+    transform: translate(-50%, -50%) rotate(calc(var(--rot) * -0.5)) scale(1);
+  }
+  28% {
+    transform: translate(-50%, -50%) rotate(var(--rot)) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -54%) rotate(var(--rot)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -70%) rotate(var(--rot)) scale(0.9);
+  }
+}
+.app.shake {
+  animation: shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-7px) rotate(-0.6deg);
+  }
+  40%,
+  60% {
+    transform: translateX(7px) rotate(0.6deg);
+  }
 }
 
 /* ───────── 알림 / 결과 ───────── */

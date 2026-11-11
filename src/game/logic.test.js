@@ -4,6 +4,7 @@ import {
   applyAction,
   createRoom,
   joinPlayer,
+  pokeTargets,
   removePlayer,
   setDisconnected,
   viewFor,
@@ -94,6 +95,22 @@ describe('bingo logic', () => {
     applyAction(room, 'a', { type: 'restart' });
     expect(room.phase).toBe('lobby');
     expect(room.players.every((p) => !p.ready)).toBe(true);
+  });
+
+  it('lets a ready player poke the slow ones, and the waiting player poke whoever has the turn', () => {
+    const room = createRoom('ABCD');
+    joinPlayer(room, 'a', 'A');
+    joinPlayer(room, 'b', 'B');
+    joinPlayer(room, 'c', 'C');
+    expect(pokeTargets(room, 'a').error).toBeTruthy(); // 나도 준비 안 함
+    applyAction(room, 'a', { type: 'ready', board: board('a') });
+    expect(pokeTargets(room, 'a').targets).toEqual(['b', 'c']);
+    applyAction(room, 'b', { type: 'ready', board: board('b') });
+    applyAction(room, 'c', { type: 'ready', board: board('c') });
+    expect(room.phase).toBe('playing');
+    const other = room.players.find((p) => p.id !== room.turnId).id;
+    expect(pokeTargets(room, other).targets).toEqual([room.turnId]);
+    expect(pokeTargets(room, room.turnId).error).toBeTruthy();
   });
 
   it('skips a disconnected player and returns to lobby when too few remain', () => {

@@ -6,6 +6,7 @@ import { tabStore } from './storage.js';
 export const PEER_PREFIX = 'nayvn-bingo-v1-';
 export const HOST_ROOM_KEY = 'bingo.hostRoom';
 const REMOVE_AFTER_MS = 60_000;
+const POKE_COOLDOWN_MS = 2_500;
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function newRoomCode() {
@@ -38,6 +39,7 @@ export class HostSession {
     this.code = this.room.code;
     this.conns = new Map(); // playerId -> DataConnection
     this.timers = new Map();
+    this.pokedAt = new Map(); // playerId -> 마지막으로 쪼은 시각
     this.destroyed = false;
     this.started = false;
     this.attempts = 0;
@@ -145,12 +147,14 @@ export class HostSession {
       this.conns.delete(conn.playerId);
       conn.replaced = true;
       res = { ok: true };
+    } else if (action?.type === 'poke') {
+      res = this._poke(conn.playerId);
     } else {
       res = L.applyAction(this.room, conn.playerId, action);
     }
 
-    if (conn.open) conn.send({ t: 'res', id, ok: res.ok, error: res.error });
-    if (res.ok) this._broadcast();
+    if (conn.open) conn.send({ t: 'res', id, ok: res.ok, error: res.error, names: res.names });
+    if (res.ok && action?.type !== 'poke') this._broadcast();
     if (notice) this._notify(notice);
   }
 
@@ -196,6 +200,39 @@ export class HostSession {
     }
   }
 
+  // 쪼기: 대상에게는 'poke', 나머지 구경꾼에게는 알림만
+  _poke(fromId) {
+    const now = Date.now();
+    if (now - (this.pokedAt.get(fromId) ?? 0) < POKE_COOLDOWN_MS) {
+      return { ok: false, error: '조금만 쉬었다가 또 쪼아요 😅' };
+    }
+    const { targets, error } = L.pokeTargets(this.room, fromId);
+    if (error) return { ok: false, error };
+    this.pokedAt.set(fromId, now);
+
+    const nameOf = (id) => this.room.players.find((p) => p.id === id)?.name ?? '';
+    const from = nameOf(fromId);
+    const names = targets.map(nameOf);
+    for (const p of this.room.players) {
+      if (p.id === fromId) continue;
+      const msg = targets.includes(p.id)
+        ? { t: 'poke', from }
+        : { t: 'notice', text: `${from}님이 ${names.join(', ')}님을 쪼았어요 👉` };
+      this._deliver(p.id, msg);
+    }
+    return { ok: true, names };
+  }
+
+  _deliver(pid, msg) {
+    if (pid === this.playerId) {
+      if (msg.t === 'poke') this.on.poke(msg.from);
+      else this.on.notice(msg.text);
+      return;
+    }
+    const conn = this.conns.get(pid);
+    if (conn?.open) conn.send(msg);
+  }
+
   _notify(text) {
     this.on.notice(text);
     for (const conn of this.conns.values()) if (conn.open) conn.send({ t: 'notice', text });
@@ -206,6 +243,7 @@ export class HostSession {
       this.closeRoom();
       return Promise.resolve({ ok: true });
     }
+    if (action?.type === 'poke') return Promise.resolve(this._poke(this.playerId));
     const res = L.applyAction(this.room, this.playerId, action);
     if (res.ok) this._broadcast();
     return Promise.resolve(res);

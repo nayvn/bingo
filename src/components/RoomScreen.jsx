@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CELLS,
   MAX_TOPIC,
-  MAX_WORD,
   MIN_PLAYERS,
   N,
   calledKeys,
@@ -122,20 +121,44 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
     setDraft((d) => d.map((w) => (w.trim() ? w : pool.pop() ?? '')));
   };
 
-  // ── 단어 부르기 ──
-  const [word, setWord] = useState('');
-  const callRef = useRef(null);
-  useEffect(() => {
-    if (myTurn && finePointer()) callRef.current?.focus();
-  }, [myTurn]);
-  const call = async () => {
-    const w = word.trim();
-    if (!w || !myTurn || busy) return;
-    if (keys.has(norm(w))) return toast('이미 나온 단어예요');
-    const res = await run({ type: 'call', word: w });
-    if (res.ok) setWord('');
+  // ── 쪼기: 준비 안 한 사람 / 내 차례 아닌데 오래 고민하는 사람 재촉 ──
+  const slowpokes = lobby
+    ? me?.ready
+      ? view.players.filter((p) => p.id !== myId && !p.ready && p.connected)
+      : []
+    : playing && !myTurn && turnPlayer?.connected
+      ? [turnPlayer]
+      : [];
+  const [pokeCooling, setPokeCooling] = useState(false);
+  const pokeTimer = useRef(null);
+  useEffect(() => () => clearTimeout(pokeTimer.current), []);
+  const poke = async () => {
+    if (pokeCooling) return;
+    setPokeCooling(true);
+    clearTimeout(pokeTimer.current);
+    pokeTimer.current = setTimeout(() => setPokeCooling(false), 2500);
+    const res = await send({ type: 'poke' });
+    if (res.ok) toast(`${res.names.join(', ')}님을 쪼았어요 👉`);
+    else toast(res.error);
   };
-  const wordOnMyBoard = Boolean(word.trim()) && boardKeys.has(norm(word));
+  const pokeButton = slowpokes.length > 0 && (
+    <button
+      className={`btn poke ${pokeCooling ? '' : 'wiggle'}`}
+      disabled={pokeCooling}
+      onClick={poke}
+      title={`${slowpokes.map((p) => p.name).join(', ')}님 재촉하기`}
+    >
+      👉 쪼기
+    </button>
+  );
+
+  // ── 단어 부르기: 내 차례에 빙고판 칸을 누르면 그 단어를 부른다 ──
+  const pick = (i) => {
+    const w = board[i];
+    if (!myTurn || busy || !w) return;
+    if (keys.has(norm(w))) return toast('이미 나온 단어예요');
+    return run({ type: 'call', word: w });
+  };
 
   // ── 결과 창: 줄 긋는 애니메이션을 본 뒤 띄우기 ──
   const [showResult, setShowResult] = useState(false);
@@ -286,6 +309,8 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
           popped={popped}
           lines={lines}
           dupes={dupes}
+          pickable={myTurn && !busy}
+          onPick={pick}
           onChange={(i, v) => setDraft((d) => d.map((w, j) => (j === i ? v : w)))}
         />
         {burst && (
@@ -326,6 +351,7 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
                 </button>
               </>
             )}
+            {pokeButton}
             <button className={`btn grow ${me?.ready ? 'ghost' : 'primary'}`} disabled={busy} onClick={toggleReady}>
               {me?.ready ? '준비 취소' : '준비 완료'}
             </button>
@@ -333,25 +359,10 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
         )}
         {playing && (
           <div className="bar">
-            <input
-              ref={callRef}
-              className={`call-input ${wordOnMyBoard ? 'has' : ''}`}
-              value={word}
-              maxLength={MAX_WORD}
-              disabled={!myTurn}
-              enterKeyHint="send"
-              autoComplete="off"
-              placeholder={myTurn ? '단어 입력 후 Enter' : `${turnPlayer?.name ?? ''}님이 고르는 중…`}
-              onChange={(e) => setWord(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
-                e.preventDefault();
-                call();
-              }}
-            />
-            <button className="btn primary" disabled={!myTurn || busy || !word.trim()} onClick={call}>
-              부르기
-            </button>
+            <div className={`turn-banner ${myTurn ? 'mine' : ''}`}>
+              {myTurn ? '👆 빙고판에서 부를 칸을 눌러요' : `${turnPlayer?.name ?? ''}님이 고르는 중…`}
+            </div>
+            {!myTurn && pokeButton}
           </div>
         )}
         {ended && (

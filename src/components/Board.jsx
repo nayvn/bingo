@@ -11,7 +11,7 @@ const sizeClass = (text) => {
 /**
  * mode: 'edit'(입력 가능) | 'locked'(준비 완료, 수정 불가) | 'play'(게임 중)
  */
-export default function Board({ cells, mode, marked, popped, lines, dupes, onChange }) {
+export default function Board({ cells, mode, marked, popped, lines, dupes, onChange, pickable, onPick }) {
   const boardRef = useRef(null);
   const cellRefs = useRef([]);
   const [segs, setSegs] = useState([]);
@@ -73,10 +73,12 @@ export default function Board({ cells, mode, marked, popped, lines, dupes, onCha
     <div className={`board mode-${mode}`} ref={boardRef}>
       {cells.map((text, i) => {
         const isMarked = mode === 'play' && marked.has(i);
+        const canPick = mode === 'play' && pickable && !isMarked;
         const cls = [
           'cell',
           sizeClass(text),
           isMarked && 'marked',
+          canPick && 'pickable',
           popped?.has(i) && 'pop',
           dupes?.has(i) && 'dupe',
         ]
@@ -90,7 +92,13 @@ export default function Board({ cells, mode, marked, popped, lines, dupes, onCha
             onClick={(e) => mode === 'edit' && e.target === e.currentTarget && focusCell(i)}
           >
             {mode === 'play' ? (
-              <span>{text}</span>
+              canPick ? (
+                <button type="button" className="pick" onClick={() => onPick(i)} aria-label={`${text} 부르기`}>
+                  <span>{text}</span>
+                </button>
+              ) : (
+                <span>{text}</span>
+              )
             ) : (
               <textarea
                 value={text}

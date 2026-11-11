@@ -13,6 +13,7 @@ export function useBingo() {
   const [error, setError] = useState('');
   const [role, setRole] = useState(null);
   const [toasts, setToasts] = useState([]);
+  const [poke, setPoke] = useState(null); // 누가 나를 쪼았는지 { from, id }
   const sessionRef = useRef(null);
   const playerIdRef = useRef(getPlayerId());
 
@@ -41,6 +42,7 @@ export function useBingo() {
         state: (v) => sessionRef.current === session && setView(v),
         status: (s) => sessionRef.current === session && setNet(s),
         notice: (text) => sessionRef.current === session && toast(text),
+        poke: (from) => sessionRef.current === session && setPoke({ from, id: Math.random() }),
         closed: (message) => sessionRef.current === session && reset(message),
       };
       const Session = role === 'host' ? HostSession : GuestSession;
@@ -96,6 +98,7 @@ export function useBingo() {
     error,
     toasts,
     toast,
+    poke,
     create,
     join,
     leave,

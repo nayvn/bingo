@@ -113,7 +113,9 @@ export class GuestSession {
     if (msg.t === 'res') {
       const resolve = this.pending.get(msg.id);
       this.pending.delete(msg.id);
-      resolve?.({ ok: msg.ok, error: msg.error });
+      resolve?.({ ok: msg.ok, error: msg.error, names: msg.names });
+    } else if (msg.t === 'poke') {
+      this.on.poke(msg.from);
     } else if (msg.t === 'state') {
       this.on.state(msg.state);
     } else if (msg.t === 'notice') {
