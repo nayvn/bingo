@@ -8,6 +8,10 @@ export const MAX_PLAYERS = 3;
 export const MAX_WORD = 20;
 export const MAX_TOPIC = 30;
 export const MAX_NAME = 10;
+// 누군가 먼저 준비를 마치면 나머지 사람에게 주는 시간. 끝나면 빈 칸을 자동으로 채워 시작한다.
+export const READY_TIMER_MS = 90_000;
+// 타이머가 도는 중에 새로 들어온 사람에게 최소한 주는 시간
+export const JOIN_GRACE_MS = 60_000;
 
 // 가로 5줄, 세로 5줄, 대각선 2줄
 export const LINES = (() => {
@@ -76,6 +80,7 @@ export function createRoom(code) {
     turnId: null,
     called: [],
     winners: [],
+    deadline: null, // 준비 마감 시각 (방장 시계 기준 ms)
   };
 }
 
@@ -102,14 +107,28 @@ function maybeStart(room) {
   if (room.players.length < MIN_PLAYERS) return;
   if (!room.players.every((p) => p.ready && p.connected)) return;
   room.phase = 'playing';
+  room.deadline = null;
   room.called = [];
   room.winners = [];
   room.players.forEach((p) => (p.lines = 0));
   room.turnId = room.players[Math.floor(Math.random() * room.players.length)].id;
 }
 
+// 준비한 사람과 안 한 사람이 섞여 있을 때만 타이머가 돈다
+function updateDeadline(room, now) {
+  const waiting = room.phase === 'lobby' && room.players.length >= MIN_PLAYERS;
+  const anyReady = room.players.some((p) => p.ready);
+  const anyNotReady = room.players.some((p) => !p.ready);
+  if (waiting && anyReady && anyNotReady) {
+    if (!room.deadline) room.deadline = now + READY_TIMER_MS;
+  } else {
+    room.deadline = null;
+  }
+}
+
 function resetToLobby(room) {
   room.phase = 'lobby';
+  room.deadline = null;
   room.called = [];
   room.winners = [];
   room.turnId = null;
@@ -119,7 +138,7 @@ function resetToLobby(room) {
   });
 }
 
-export function joinPlayer(room, id, name) {
+export function joinPlayer(room, id, name, now = Date.now()) {
   name = clean(name, MAX_NAME);
   if (!name) return fail('닉네임을 입력해 주세요');
   let p = findPlayer(room, id);
@@ -128,10 +147,12 @@ export function joinPlayer(room, id, name) {
     if (room.players.length >= MAX_PLAYERS) return fail(`방이 꽉 찼어요 (최대 ${MAX_PLAYERS}명)`);
     p = { id, name, ready: false, board: null, lines: 0, connected: true };
     room.players.push(p);
+    if (room.deadline) room.deadline = Math.max(room.deadline, now + JOIN_GRACE_MS);
   }
   p.connected = true;
   if (room.phase === 'lobby') p.name = name;
   maybeStart(room);
+  updateDeadline(room, now);
   return OK;
 }
 
@@ -143,7 +164,7 @@ export function setDisconnected(room, id) {
 }
 
 // 나간 사람 이름이 담긴 안내 문구를 돌려준다 (없으면 null)
-export function removePlayer(room, id) {
+export function removePlayer(room, id, now = Date.now()) {
   const idx = room.players.findIndex((p) => p.id === id);
   if (idx < 0) return null;
   const p = room.players[idx];
@@ -158,10 +179,11 @@ export function removePlayer(room, id) {
     notice += ' · 인원이 부족해 대기실로 돌아왔어요';
   }
   maybeStart(room);
+  updateDeadline(room, now);
   return notice;
 }
 
-export function applyAction(room, id, action) {
+export function applyAction(room, id, action, now = Date.now()) {
   const p = findPlayer(room, id);
   if (!p) return fail('방에 참여하지 않았어요');
   const lobbyOnly = () => (room.phase === 'lobby' ? null : fail('게임 중에는 바꿀 수 없어요'));
@@ -190,12 +212,14 @@ export function applyAction(room, id, action) {
       p.board = cells;
       p.ready = true;
       maybeStart(room);
+      updateDeadline(room, now);
       return OK;
     }
     case 'unready': {
       const err = lobbyOnly();
       if (err) return err;
       p.ready = false;
+      updateDeadline(room, now);
       return OK;
     }
     case 'call': {
@@ -249,7 +273,7 @@ export function pokeTargets(room, fromId) {
 
 // 참가자 한 명에게 보낼 상태. 다른 사람의 빙고판은 포함하지 않는다.
 // 방장 화면도 이 값을 그대로 쓰므로, 방 상태와 배열을 공유하지 않게 복사본을 만든다.
-export function viewFor(room, id) {
+export function viewFor(room, id, now = Date.now()) {
   const me = findPlayer(room, id);
   return {
     code: room.code,
@@ -260,6 +284,8 @@ export function viewFor(room, id) {
     turnId: room.turnId,
     called: room.called.map((c) => ({ ...c })),
     winners: [...room.winners],
+    // 기기마다 시계가 달라서 마감 시각 대신 "남은 시간"을 보낸다
+    timeLeft: room.deadline ? Math.max(0, room.deadline - now) : null,
     players: room.players.map(({ id, name, ready, connected, lines }) => ({ id, name, ready, connected, lines })),
     me: me ? { id: me.id, board: me.board ? [...me.board] : null, ready: me.ready } : null,
   };

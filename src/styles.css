@@ -488,6 +488,60 @@ button:focus-visible {
 .target option {
   background: #1d1c26;
 }
+.suggest-btn {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgb(185 166 255 / 0.3);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: none;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+}
+.suggest-btn:hover {
+  background: rgb(185 166 255 / 0.22);
+}
+.suggest-btn:active {
+  transform: scale(0.94) rotate(-8deg);
+}
+
+.lobby-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timer {
+  padding: 3px 9px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 99px;
+  background: var(--glass-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.timer.soon {
+  border-color: rgb(255 200 120 / 0.5);
+  color: #ffd29a;
+}
+.timer.urgent {
+  border-color: var(--danger);
+  background: rgb(255 122 138 / 0.15);
+  color: var(--danger);
+  animation: tick 1s ease-in-out infinite;
+}
+@keyframes tick {
+  50% {
+    transform: scale(1.08);
+  }
+}
+
 .target-tag {
   padding: 5px 10px;
   border-radius: 10px;

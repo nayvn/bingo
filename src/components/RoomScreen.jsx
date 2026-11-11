@@ -11,6 +11,7 @@ import {
   norm,
   validateBoard,
 } from '../game/logic.js';
+import { autofillBoard, suggestTopic, topicWords } from '../game/autofill.js';
 import { tabStore } from '../net/storage.js';
 import Board from './Board.jsx';
 
@@ -98,6 +99,18 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
   useEffect(() => {
     if (!topicFocused) setTopic(view.topic);
   }, [view.topic, topicFocused]);
+  const changeTopic = (text) => {
+    setTopic(text);
+    send({ type: 'topic', text });
+  };
+  const recommendTopic = () => changeTopic(suggestTopic(topic));
+
+  // 주제가 정해지면 미리 단어를 받아 둬서, 자동 채우기가 바로 되게
+  useEffect(() => {
+    if (!lobby || !view.topic.trim()) return undefined;
+    const t = setTimeout(() => topicWords(view.topic).catch(() => {}), 1200);
+    return () => clearTimeout(t);
+  }, [lobby, view.topic]);
 
   const [busy, setBusy] = useState(false);
   const run = async (action) => {
@@ -119,11 +132,64 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
     if (filled && window.confirm('빙고판을 모두 지울까요?')) setDraft(emptyBoard());
   };
 
-  const fillNumbers = () => {
-    const used = new Set(draft.map(norm));
-    const pool = shuffle([...Array(50).keys()].map((i) => String(i + 1)).filter((x) => !used.has(x)));
-    setDraft((d) => d.map((w) => (w.trim() ? w : pool.pop() ?? '')));
+  // ── 자동 채우기: 주제 단어를 위키에서 가져와 빈 칸에 (없으면 숫자) ──
+  const [filling, setFilling] = useState(false);
+  const autoFill = async () => {
+    if (filling) return null;
+    setFilling(true);
+    // 같은 단어가 두 번 들어간 칸은 뒤쪽을 비우고 새로 채운다
+    const seen = new Set();
+    const base = draft.map((w) => {
+      const k = norm(w);
+      if (!k || seen.has(k)) return '';
+      seen.add(k);
+      return w;
+    });
+    const result = await autofillBoard(base, view.topic);
+    setFilling(false);
+    setDraft(result.board);
+    return result;
   };
+  const fillText = ({ fromWiki, fromNumbers }) => {
+    if (!fromWiki && !fromNumbers) return '이미 다 채워져 있어요';
+    if (!view.topic.trim()) return `주제가 없어서 ${fromNumbers}칸을 숫자로 채웠어요`;
+    if (!fromWiki) return `'${view.topic}' 단어를 못 찾아서 ${fromNumbers}칸을 숫자로 채웠어요`;
+    return `'${view.topic}' 단어로 ${fromWiki}칸 채웠어요${fromNumbers ? ` · 나머지 ${fromNumbers}칸은 숫자` : ''}`;
+  };
+  const onAutoFill = async () => {
+    const result = await autoFill();
+    if (result) toast(fillText(result));
+  };
+
+  // ── 준비 타이머: 누가 먼저 준비하면 1분 30초. 끝나면 빈 칸 자동 채우고 바로 준비 ──
+  const [deadlineAt, setDeadlineAt] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = Date.now();
+    setNow(t);
+    setDeadlineAt(view.timeLeft == null ? null : t + view.timeLeft);
+  }, [view]);
+  useEffect(() => {
+    if (!deadlineAt) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [deadlineAt]);
+  const secondsLeft = deadlineAt ? Math.max(0, Math.ceil((deadlineAt - now) / 1000)) : null;
+  const clock = secondsLeft == null ? '' : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
+
+  const timeUpHandled = useRef(null);
+  useEffect(() => {
+    if (!lobby || me?.ready || secondsLeft !== 0 || timeUpHandled.current === deadlineAt) return;
+    timeUpHandled.current = deadlineAt;
+    (async () => {
+      const result = await autoFill();
+      if (!result) return;
+      const empty = result.fromWiki + result.fromNumbers;
+      toast(empty ? `⏰ 시간 끝! 빈 칸 ${empty}개를 자동으로 채웠어요` : '⏰ 시간 끝! 바로 준비할게요');
+      run({ type: 'ready', board: result.board });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft, lobby, me?.ready, deadlineAt]);
 
   // ── 쪼기: 준비 안 한 사람 / 내 차례 아닌데 오래 고민하는 사람 재촉 ──
   const slowpokes = lobby
@@ -209,8 +275,11 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
       view.players.length < MIN_PLAYERS ? (
         <span>친구를 초대해 주세요</span>
       ) : (
-        <span>
+        <span className="lobby-status">
           준비 {readyCount}/{view.players.length}
+          {secondsLeft != null && (
+            <span className={`timer ${secondsLeft <= 10 ? 'urgent' : secondsLeft <= 30 ? 'soon' : ''}`}>⏱ {clock}</span>
+          )}
         </span>
       );
   else if (myTurn) status = <span className="my-turn">내 차례! 단어를 불러요</span>;
@@ -270,11 +339,13 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
           placeholder="예) 과일, 동물, 나라…"
           onFocus={() => setTopicFocused(true)}
           onBlur={() => setTopicFocused(false)}
-          onChange={(e) => {
-            setTopic(e.target.value);
-            send({ type: 'topic', text: e.target.value });
-          }}
+          onChange={(e) => changeTopic(e.target.value)}
         />
+        {lobby && (
+          <button className="suggest-btn" onClick={recommendTopic} title="주제 자동 추천">
+            🎲 추천
+          </button>
+        )}
         {lobby ? (
           <select
             className="target"
@@ -329,7 +400,9 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
           <span className="hint">
             {me?.ready
               ? '다른 사람을 기다리는 중… (수정하려면 준비 취소)'
-              : `${filled}/${CELLS}칸 채움${dupes?.size ? ' · 같은 단어가 있어요' : ''}`}
+              : secondsLeft != null
+                ? `${filled}/${CELLS}칸 · 시간이 끝나면 빈 칸은 자동으로 채워져요`
+                : `${filled}/${CELLS}칸 채움${dupes?.size ? ' · 같은 단어가 있어요' : ''}`}
           </span>
         ) : view.called.length ? (
           view.called.map((c, i) => (
@@ -347,8 +420,8 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
           <div className="bar">
             {!me?.ready && (
               <>
-                <button className="btn ghost" onClick={fillNumbers} title="빈 칸을 숫자로 채우기">
-                  🎲 숫자
+                <button className="btn ghost" onClick={onAutoFill} disabled={filling} title="주제에 맞는 단어로 빈 칸 채우기">
+                  {filling ? '채우는 중…' : '✨ 자동'}
                 </button>
                 <button className="btn ghost" onClick={() => setDraft((d) => shuffle(d))} title="칸 섞기">
                   🔀 섞기

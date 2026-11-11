@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  JOIN_GRACE_MS,
   LINES,
+  READY_TIMER_MS,
   applyAction,
   createRoom,
   joinPlayer,
@@ -111,6 +113,27 @@ describe('bingo logic', () => {
     const other = room.players.find((p) => p.id !== room.turnId).id;
     expect(pokeTargets(room, other).targets).toEqual([room.turnId]);
     expect(pokeTargets(room, room.turnId).error).toBeTruthy();
+  });
+
+  it('runs a ready countdown only while someone is waiting on someone else', () => {
+    const room = createRoom('ABCD');
+    joinPlayer(room, 'a', 'A', 0);
+    applyAction(room, 'a', { type: 'ready', board: board('a') }, 0);
+    expect(room.deadline).toBeNull(); // 혼자면 안 돎
+    joinPlayer(room, 'b', 'B', 1000);
+    expect(room.deadline).toBe(1000 + READY_TIMER_MS);
+    expect(viewFor(room, 'b', 31000).timeLeft).toBe(READY_TIMER_MS - 30000);
+    applyAction(room, 'a', { type: 'unready' }, 2000);
+    expect(room.deadline).toBeNull();
+    applyAction(room, 'b', { type: 'ready', board: board('b') }, 3000);
+    expect(room.deadline).toBe(3000 + READY_TIMER_MS);
+    // 타이머 도중 들어온 사람은 최소 1분 보장
+    joinPlayer(room, 'c', 'C', 80000);
+    expect(room.deadline).toBe(80000 + JOIN_GRACE_MS);
+    applyAction(room, 'a', { type: 'ready', board: board('a') }, 81000);
+    applyAction(room, 'c', { type: 'ready', board: board('c') }, 82000);
+    expect(room.phase).toBe('playing');
+    expect(room.deadline).toBeNull();
   });
 
   it('skips a disconnected player and returns to lobby when too few remain', () => {

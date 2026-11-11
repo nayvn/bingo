@@ -1,4 +1,5 @@
 import Peer from 'peerjs';
+import { autofillBoard } from '../game/autofill.js';
 import * as L from '../game/logic.js';
 import { tabStore } from './storage.js';
 
@@ -7,6 +8,8 @@ export const PEER_PREFIX = 'nayvn-bingo-v1-';
 export const HOST_ROOM_KEY = 'bingo.hostRoom';
 const REMOVE_AFTER_MS = 60_000;
 const POKE_COOLDOWN_MS = 2_500;
+// 마감 후 각자 화면이 알아서 채우고 준비하는데, 그래도 안 되면(앱이 백그라운드 등) 방장이 대신 채운다
+const FORCE_FILL_GRACE_MS = 12_000;
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function newRoomCode() {
@@ -186,8 +189,29 @@ export class HostSession {
     this.timers.delete(pid);
   }
 
+  _syncDeadline() {
+    const d = this.room.deadline ?? null;
+    if (d === this.deadlineArmed) return;
+    clearTimeout(this.deadlineTimer);
+    this.deadlineArmed = d;
+    if (!d) return;
+    this.deadlineTimer = setTimeout(() => this._forceFill(d), Math.max(0, d - Date.now()) + FORCE_FILL_GRACE_MS);
+  }
+
+  async _forceFill(deadline) {
+    if (this.destroyed || this.room.phase !== 'lobby' || this.room.deadline !== deadline) return;
+    const late = this.room.players.filter((p) => !p.ready && p.connected);
+    for (const p of late) {
+      const { board } = await autofillBoard(p.board ?? [], this.room.topic);
+      if (this.destroyed || this.room.phase !== 'lobby') break;
+      L.applyAction(this.room, p.id, { type: 'ready', board });
+    }
+    this._broadcast();
+  }
+
   _broadcast() {
     if (this.destroyed) return;
+    this._syncDeadline();
     tabStore.set(HOST_ROOM_KEY, this.room);
     for (const p of this.room.players) {
       const view = L.viewFor(this.room, p.id);
@@ -256,12 +280,14 @@ export class HostSession {
     const peer = this.peer;
     this.destroyed = true;
     this.timers.forEach(clearTimeout);
+    clearTimeout(this.deadlineTimer);
     setTimeout(() => peer?.destroy(), 300);
   }
 
   destroy() {
     this.destroyed = true;
     this.timers.forEach(clearTimeout);
+    clearTimeout(this.deadlineTimer);
     this.peer?.destroy();
   }
 }
