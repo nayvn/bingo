@@ -1,23 +1,32 @@
 :root {
-  --bg: #fff7ec;
-  --surface: #ffffff;
-  --ink: #2b2240;
-  --ink-soft: #6f6685;
-  --line-soft: #eadfce;
+  --page: #000000;
+  --bg: #121117;
+  --surface: #1c1a22;
+  --surface-2: #25222d;
+  --text: #f2ede4;
+  --text-soft: #8f889c;
+  --border: #3a3545;
+  --line-soft: #2c2834;
+  --edge: #000000;
   --primary: #ff6b4a;
   --primary-ink: #ffffff;
   --accent: #ffc83d;
+  --accent-ink: #1a1400;
   --mark: #ff6b4a;
-  --bingo-line: #2b2240;
-  --danger: #e5484d;
+  --board: #0a090d;
+  --bingo-line: #0a090d;
+  --focus-cell: #302917;
+  --has-word: #3a2019;
+  --win-bg: #33290f;
+  --danger: #ff6369;
   --p0: #ff6b4a;
-  --p1: #3d8bff;
-  --p2: #1fae7a;
-  --px: #a49bb5;
+  --p1: #4c96ff;
+  --p2: #2bc28b;
+  --px: #6f687c;
   --radius: 14px;
   --display: 'Jua', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
   --ui: 'Apple SD Gothic Neo', 'Pretendard', 'Malgun Gothic', system-ui, -apple-system, sans-serif;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 * {
@@ -32,8 +41,8 @@ body,
 }
 
 body {
-  background: var(--ink);
-  color: var(--ink);
+  background: var(--page);
+  color: var(--text);
   font-family: var(--ui);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
@@ -47,6 +56,11 @@ input,
 select {
   font: inherit;
   color: inherit;
+}
+
+input::placeholder {
+  color: var(--text-soft);
+  opacity: 0.7;
 }
 
 /* 500 x 680 기준. 그보다 작은 화면(폰)에서는 화면에 꽉 차게 */
@@ -63,8 +77,9 @@ select {
 
 @media (min-width: 501px) and (min-height: 681px) {
   .app {
+    border: 1px solid var(--line-soft);
     border-radius: 24px;
-    box-shadow: 0 30px 80px rgb(0 0 0 / 0.45);
+    box-shadow: 0 30px 80px rgb(0 0 0 / 0.6);
   }
 }
 
@@ -72,30 +87,31 @@ select {
 .btn {
   height: 46px;
   padding: 0 16px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border);
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--surface-2);
   font-family: var(--display);
   font-size: 17px;
   cursor: pointer;
-  box-shadow: 0 3px 0 var(--ink);
+  box-shadow: 0 3px 0 var(--edge);
   transition: transform 0.08s, box-shadow 0.08s;
   white-space: nowrap;
 }
 .btn:active:not(:disabled) {
   transform: translateY(3px);
-  box-shadow: 0 0 0 var(--ink);
+  box-shadow: 0 0 0 var(--edge);
 }
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
 .btn.primary {
+  border-color: var(--primary);
   background: var(--primary);
   color: var(--primary-ink);
 }
 .btn.ghost {
-  background: var(--surface);
+  background: var(--surface-2);
 }
 .btn.big {
   height: 54px;
@@ -112,17 +128,17 @@ select {
   border-radius: 10px;
   background: transparent;
   font-size: 16px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   cursor: pointer;
   flex: none;
 }
 .icon-btn:hover {
-  background: var(--line-soft);
+  background: var(--surface-2);
 }
 .link-btn {
   border: none;
   background: none;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   text-decoration: underline;
   cursor: pointer;
   font-size: 14px;
@@ -155,15 +171,16 @@ button:focus-visible {
   place-items: center;
   width: 56px;
   height: 56px;
-  border: 3px solid var(--ink);
+  border: 2px solid var(--border);
   border-radius: 14px;
-  background: var(--surface);
+  background: var(--surface-2);
   font-family: var(--display);
   font-size: 34px;
-  box-shadow: 0 4px 0 var(--ink);
+  box-shadow: 0 4px 0 var(--edge);
   animation: drop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 .logo span:nth-child(odd) {
+  border-color: var(--primary);
   background: var(--primary);
   color: #fff;
 }
@@ -175,7 +192,7 @@ button:focus-visible {
 }
 .tagline {
   margin: 10px 0 18px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 15px;
 }
 .join-card {
@@ -190,17 +207,22 @@ button:focus-visible {
   flex-direction: column;
   gap: 6px;
   font-size: 14px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
 }
 .field input,
 .code-input {
   height: 50px;
   padding: 0 14px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   font-size: 17px;
-  color: var(--ink);
+  color: var(--text);
+}
+.field input:focus,
+.code-input:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 .code-row {
   display: flex;
@@ -222,7 +244,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 13px;
 }
 .divider::before,
@@ -243,7 +265,7 @@ button:focus-visible {
   flex: 1;
   display: grid;
   place-items: center;
-  color: var(--ink-soft);
+  color: var(--text-soft);
 }
 
 /* ───────── 방 화면 ───────── */
@@ -269,9 +291,10 @@ button:focus-visible {
   gap: 4px;
   height: 34px;
   padding: 0 10px;
-  border: 2px solid var(--ink);
+  border: none;
   border-radius: 10px;
   background: var(--accent);
+  color: var(--accent-ink);
   cursor: pointer;
   flex: none;
 }
@@ -303,7 +326,7 @@ button:focus-visible {
   padding: 0 8px;
   border: 2px solid transparent;
   border-radius: 99px;
-  background: var(--surface);
+  background: var(--surface-2);
   font-size: 13px;
   transition: border-color 0.2s;
 }
@@ -335,7 +358,7 @@ button:focus-visible {
   padding: 2px 6px;
   border-radius: 99px;
   background: var(--line-soft);
-  color: var(--ink-soft);
+  color: var(--text-soft);
   flex: none;
 }
 .badge.on {
@@ -356,7 +379,7 @@ button:focus-visible {
 }
 @keyframes pulse {
   50% {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent);
   }
 }
 
@@ -366,17 +389,20 @@ button:focus-visible {
   gap: 8px;
   height: 48px;
   padding: 0 6px 0 12px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   flex: none;
+}
+.topic-row:focus-within {
+  border-color: var(--accent);
 }
 .topic-label {
   font-family: var(--display);
   font-size: 15px;
   padding: 3px 8px;
   border-radius: 8px;
-  background: var(--ink);
+  background: var(--text);
   color: var(--bg);
   flex: none;
 }
@@ -389,7 +415,8 @@ button:focus-visible {
   font-family: var(--display);
   font-size: 19px;
 }
-.topic-input:focus {
+.topic-input:focus,
+.topic-input:focus-visible {
   outline: none;
 }
 .topic-input[readonly] {
@@ -400,22 +427,22 @@ button:focus-visible {
   padding: 0 6px;
   border: 2px solid var(--line-soft);
   border-radius: 9px;
-  background: var(--bg);
+  background: var(--surface-2);
   font-size: 14px;
   flex: none;
 }
 .target-tag {
   padding: 4px 9px;
   border-radius: 9px;
-  background: var(--bg);
+  background: var(--surface-2);
   font-size: 13px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   flex: none;
 }
 .topic-by {
   margin: -4px 0 0 4px;
   font-size: 11px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   height: 12px;
   line-height: 12px;
   flex: none;
@@ -445,14 +472,14 @@ button:focus-visible {
   transition: all 0.3s;
 }
 .progress span.on {
-  border-color: var(--ink);
+  border-color: var(--accent);
   background: var(--accent);
-  color: var(--ink);
+  color: var(--accent-ink);
   animation: bump 0.4s ease-out;
 }
 .status {
   font-size: 14px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
 }
 .status .my-turn {
   font-family: var(--display);
@@ -481,9 +508,9 @@ button:focus-visible {
   grid-template-rows: repeat(5, 1fr);
   gap: 1.4%;
   padding: 1.6%;
-  border: 3px solid var(--ink);
+  border: 2px solid var(--border);
   border-radius: 18px;
-  background: var(--ink);
+  background: var(--board);
   container-type: inline-size;
 }
 .cell {
@@ -493,37 +520,51 @@ button:focus-visible {
   min-width: 0;
   min-height: 0;
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--surface-2);
   overflow: hidden;
   transition: background 0.25s, color 0.25s;
 }
-.cell input {
+/* 칸 입력: 길어지면 자동 줄바꿈 (높이는 Board에서 글자에 맞춤) */
+.cell textarea {
+  display: block;
   width: 100%;
-  height: 100%;
-  padding: 0 3px;
+  max-height: 100%;
+  padding: 2px 4px;
   border: none;
   background: transparent;
   text-align: center;
   font-family: var(--display);
   font-size: clamp(13px, 4.6cqw, 20px);
-  border-radius: 10px;
+  line-height: 1.15;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  resize: none;
+  overflow: hidden;
 }
-.cell input:focus {
+.cell textarea:focus,
+.cell textarea:focus-visible {
   outline: none;
-  background: #fff3c4;
 }
-.cell.sm input {
+.cell:focus-within {
+  background: var(--focus-cell);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.mode-edit .cell {
+  cursor: text;
+}
+.cell.sm textarea {
   font-size: clamp(12px, 3.6cqw, 16px);
 }
-.cell.xs input {
+.cell.xs textarea {
   font-size: clamp(11px, 2.9cqw, 13px);
 }
 .mode-locked .cell {
-  background: #f4eee6;
+  background: var(--surface);
 }
-.mode-locked .cell input {
-  color: var(--ink);
-  -webkit-text-fill-color: var(--ink);
+.mode-locked .cell textarea {
+  color: var(--text-soft);
+  -webkit-text-fill-color: var(--text-soft);
   opacity: 1;
 }
 .cell.dupe {
@@ -556,7 +597,7 @@ button:focus-visible {
   content: '';
   position: absolute;
   inset: 12%;
-  border: 2px solid rgb(255 255 255 / 0.55);
+  border: 2px solid rgb(255 255 255 / 0.45);
   border-radius: 50%;
 }
 .cell.pop {
@@ -613,9 +654,9 @@ button:focus-visible {
   font-family: var(--display);
   font-size: 54px;
   color: var(--accent);
-  -webkit-text-stroke: 2px var(--ink);
+  -webkit-text-stroke: 2px var(--edge);
   paint-order: stroke fill;
-  text-shadow: 0 5px 0 var(--ink);
+  text-shadow: 0 5px 0 var(--edge);
   animation: burst 1.5s ease-out both;
 }
 @keyframes burst {
@@ -661,7 +702,7 @@ button:focus-visible {
   width: 100%;
   text-align: center;
   font-size: 13px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   white-space: nowrap;
 }
 .chip {
@@ -694,19 +735,25 @@ button:focus-visible {
   min-width: 0;
   height: 46px;
   padding: 0 14px;
-  border: 2px solid var(--ink);
+  border: 2px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   font-family: var(--display);
   font-size: 18px;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
+}
+.call-input:focus,
+.call-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
 }
 .call-input:disabled {
-  background: #f4eee6;
+  background: var(--bg);
   border-color: var(--line-soft);
 }
 .call-input.has {
-  background: #ffe9e3;
+  background: var(--has-word);
+  border-color: var(--primary);
 }
 
 /* ───────── 알림 / 결과 ───────── */
@@ -727,10 +774,10 @@ button:focus-visible {
   max-width: 100%;
   padding: 9px 16px;
   border-radius: 12px;
-  background: var(--ink);
+  background: var(--text);
   color: var(--bg);
   font-size: 14px;
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.5);
   animation: toast 2.6s ease both;
 }
 @keyframes toast {
@@ -755,17 +802,17 @@ button:focus-visible {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgb(43 34 64 / 0.55);
+  background: rgb(0 0 0 / 0.65);
   animation: fade 0.25s ease both;
 }
 .result {
   width: 100%;
   max-width: 360px;
   padding: 22px 18px 18px;
-  border: 3px solid var(--ink);
+  border: 2px solid var(--border);
   border-radius: 20px;
-  background: var(--bg);
-  box-shadow: 0 6px 0 var(--ink);
+  background: var(--surface);
+  box-shadow: 0 6px 0 var(--edge);
   text-align: center;
   animation: rise 0.35s cubic-bezier(0.2, 1.3, 0.4, 1) both;
 }
@@ -781,7 +828,7 @@ button:focus-visible {
 }
 .result p {
   margin: 0 0 14px;
-  color: var(--ink-soft);
+  color: var(--text-soft);
   font-size: 14px;
 }
 .ranking {
@@ -798,11 +845,12 @@ button:focus-visible {
   gap: 8px;
   padding: 9px 12px;
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--surface-2);
   text-align: left;
 }
 .ranking li.win {
-  background: #fff1c2;
+  background: var(--win-bg);
+  color: var(--accent);
   font-weight: 700;
 }
 .ranking .name {

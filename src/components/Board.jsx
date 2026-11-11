@@ -56,7 +56,18 @@ export default function Board({ cells, mode, marked, popped, lines, dupes, onCha
   let freshCount = 0;
   for (const li of lines) if (!delays.has(li)) delays.set(li, freshCount++ * 0.28);
 
-  const focusCell = (i) => cellRefs.current[i]?.querySelector('input')?.focus();
+  const focusCell = (i) => cellRefs.current[i]?.querySelector('textarea')?.focus();
+
+  // 입력칸 높이를 글자 줄 수에 맞춰서, 칸 안에서 세로 가운데 정렬되게
+  const fitKey = `${mode}|${cells.join('\u0000')}|${box.w}`;
+  useLayoutEffect(() => {
+    for (const cell of cellRefs.current) {
+      const ta = cell?.querySelector('textarea');
+      if (!ta) continue;
+      ta.style.height = 'auto';
+      ta.style.height = `${Math.min(ta.scrollHeight, cell.clientHeight)}px`;
+    }
+  }, [fitKey]);
 
   return (
     <div className={`board mode-${mode}`} ref={boardRef}>
@@ -72,17 +83,23 @@ export default function Board({ cells, mode, marked, popped, lines, dupes, onCha
           .filter(Boolean)
           .join(' ');
         return (
-          <div key={i} className={cls} ref={(el) => (cellRefs.current[i] = el)}>
+          <div
+            key={i}
+            className={cls}
+            ref={(el) => (cellRefs.current[i] = el)}
+            onClick={(e) => mode === 'edit' && e.target === e.currentTarget && focusCell(i)}
+          >
             {mode === 'play' ? (
               <span>{text}</span>
             ) : (
-              <input
+              <textarea
                 value={text}
+                rows={1}
                 maxLength={MAX_WORD}
                 disabled={mode === 'locked'}
                 enterKeyHint={i === cells.length - 1 ? 'done' : 'next'}
                 aria-label={`${Math.floor(i / N) + 1}행 ${(i % N) + 1}열`}
-                onChange={(e) => onChange(i, e.target.value)}
+                onChange={(e) => onChange(i, e.target.value.replace(/[\r\n]+/g, ' '))}
                 onKeyDown={(e) => {
                   if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
                   e.preventDefault();
