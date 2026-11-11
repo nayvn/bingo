@@ -113,6 +113,16 @@ input::placeholder {
 .btn.ghost {
   background: var(--surface-2);
 }
+.bar .btn.ghost {
+  padding: 0 11px;
+  font-size: 15px;
+}
+@media (max-width: 380px) {
+  .bar .btn.ghost {
+    padding: 0 8px;
+    font-size: 14px;
+  }
+}
 .btn.big {
   height: 54px;
   font-size: 20px;

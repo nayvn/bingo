@@ -115,6 +115,10 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
     return run({ type: 'ready', board: draft });
   };
 
+  const clearBoard = () => {
+    if (filled && window.confirm('빙고판을 모두 지울까요?')) setDraft(emptyBoard());
+  };
+
   const fillNumbers = () => {
     const used = new Set(draft.map(norm));
     const pool = shuffle([...Array(50).keys()].map((i) => String(i + 1)).filter((x) => !used.has(x)));
@@ -348,6 +352,9 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
                 </button>
                 <button className="btn ghost" onClick={() => setDraft((d) => shuffle(d))} title="칸 섞기">
                   🔀 섞기
+                </button>
+                <button className="btn ghost" onClick={clearBoard} disabled={!filled} title="빙고판 비우기">
+                  🧹 비우기
                 </button>
               </>
             )}
