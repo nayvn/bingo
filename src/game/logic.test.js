@@ -136,6 +136,22 @@ describe('bingo logic', () => {
     expect(room.deadline).toBeNull();
   });
 
+  it('rotates who starts each new game', () => {
+    const room = createRoom('ABCD');
+    ['a', 'b', 'c'].forEach((id) => joinPlayer(room, id, id.toUpperCase()));
+    const starters = [];
+    for (let game = 0; game < 4; game++) {
+      ['a', 'b', 'c'].forEach((id) => applyAction(room, id, { type: 'ready', board: board(id) }));
+      expect(room.phase).toBe('playing');
+      starters.push(room.turnId);
+      room.phase = 'ended';
+      applyAction(room, 'a', { type: 'restart' });
+    }
+    const order = ['a', 'b', 'c'];
+    const first = order.indexOf(starters[0]);
+    expect(starters).toEqual([0, 1, 2, 3].map((k) => order[(first + k) % 3]));
+  });
+
   it('skips a disconnected player and returns to lobby when too few remain', () => {
     const room = readyRoom();
     const first = room.turnId;

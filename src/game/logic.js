@@ -81,6 +81,7 @@ export function createRoom(code) {
     called: [],
     winners: [],
     deadline: null, // 준비 마감 시각 (방장 시계 기준 ms)
+    nextStarter: null, // 다음 판에 먼저 시작할 자리 번호
   };
 }
 
@@ -111,7 +112,11 @@ function maybeStart(room) {
   room.called = [];
   room.winners = [];
   room.players.forEach((p) => (p.lines = 0));
-  room.turnId = room.players[Math.floor(Math.random() * room.players.length)].id;
+  // 첫 판은 랜덤, 그다음부터는 시작하는 사람이 한 자리씩 돌아간다
+  const n = room.players.length;
+  const seat = Number.isInteger(room.nextStarter) ? room.nextStarter % n : Math.floor(Math.random() * n);
+  room.turnId = room.players[seat].id;
+  room.nextStarter = (seat + 1) % n;
 }
 
 // 준비한 사람과 안 한 사람이 섞여 있을 때만 타이머가 돈다

@@ -71,6 +71,16 @@ export default function RoomScreen({ view, role, net, send, leave, toast }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.called.length]);
 
+  // ── 게임이 시작되면 누가 먼저인지 알려주기 (판마다 돌아가며 시작) ──
+  const prevPhase = useRef(view.phase);
+  useEffect(() => {
+    const started = prevPhase.current === 'lobby' && view.phase === 'playing';
+    prevPhase.current = view.phase;
+    if (!started || !turnPlayer) return;
+    toast(turnPlayer.id === myId ? '🎬 이번 판은 내가 먼저 시작해요!' : `🎬 이번 판은 ${turnPlayer.name}님부터 시작해요`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view.phase]);
+
   // ── 빙고 줄이 늘어나면 큰 글씨로 축하 ──
   const prevLines = useRef(null);
   const burstTimer = useRef(null);
