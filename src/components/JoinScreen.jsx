@@ -51,7 +51,12 @@ export default function JoinScreen({ busy, error, onCreate, onJoin }) {
           </span>
         ))}
       </div>
-      <p className="tagline">주제 하나, 빙고판은 각자. 2~3명이 함께해요</p>
+      <p className="tagline">2~3명이 함께하는 놀이방</p>
+      <ul className="game-chips" aria-label="할 수 있는 게임">
+        <li>🎯 빙고</li>
+        <li>🔤 초성퀴즈</li>
+        <li>🎨 그림맞히기</li>
+      </ul>
 
       <div className="join-card">
         <label className="field">

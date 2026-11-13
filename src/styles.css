@@ -1038,6 +1038,457 @@ button:focus-visible {
   }
 }
 
+/* ───────── 게임 고르기 ───────── */
+.game-tabs {
+  display: flex;
+  gap: 4px;
+  height: 36px;
+  padding: 3px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--glass);
+  flex: none;
+}
+.game-tabs .tab {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.game-tabs .tab:hover:not(:disabled):not(.on) {
+  background: var(--glass-2);
+  color: var(--text);
+}
+.game-tabs .tab.on {
+  background: var(--glass-3);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgb(185 166 255 / 0.35);
+}
+.game-tabs .tab:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+@media (max-width: 360px) {
+  .game-tabs .tab {
+    font-size: 12px;
+    gap: 3px;
+  }
+}
+
+.game-chips {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 14px;
+  padding: 0;
+  list-style: none;
+}
+.game-chips li {
+  padding: 5px 10px;
+  border: 1px solid var(--stroke);
+  border-radius: 99px;
+  background: var(--glass);
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* ───────── 초성퀴즈 · 그림 맞히기 대기실 ───────── */
+.topic-row.setup {
+  gap: 16px;
+  padding: 0 12px;
+}
+.setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.setting .target {
+  min-width: 0;
+}
+.round-tag {
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rules {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 20px;
+  background:
+    radial-gradient(100% 70% at 50% 0%, rgb(139 108 255 / 0.14) 0%, transparent 70%),
+    var(--glass);
+  text-align: center;
+  overflow-y: auto;
+}
+.rules-icon {
+  font-size: 44px;
+  line-height: 1;
+  animation: float 3s ease-in-out infinite;
+}
+.rules h3 {
+  margin: 6px 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+}
+.rules ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rules li {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--glass);
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.rules-foot {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+@keyframes float {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ───────── 초성퀴즈 ───────── */
+.quiz-card {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(139 108 255 / 0.2) 0%, transparent 70%),
+    var(--glass);
+  transition: border-color 0.2s;
+}
+.quiz-card.reveal {
+  border-color: rgb(185 166 255 / 0.5);
+}
+.quiz-cat {
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.quiz-word {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+.quiz-word span {
+  display: grid;
+  place-items: center;
+  min-width: clamp(38px, 11vw, 52px);
+  height: clamp(46px, 13vw, 60px);
+  padding: 0 4px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 14px;
+  background: var(--glass-2);
+  font-size: clamp(22px, 7vw, 30px);
+  font-weight: 800;
+  animation: pop 0.35s ease-out both;
+}
+.quiz-word span:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.quiz-word span:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.quiz-word span:nth-child(4) {
+  animation-delay: 0.12s;
+}
+.quiz-word span.cho {
+  color: var(--accent);
+}
+.quiz-word span.open {
+  border-color: transparent;
+  background: linear-gradient(145deg, var(--mark-a), var(--mark-b));
+  color: #fff;
+  box-shadow: 0 0 16px rgb(139 108 255 / 0.4);
+}
+.quiz-result {
+  margin: 0;
+  min-height: 20px;
+  font-size: 14px;
+  text-align: center;
+}
+.timebar {
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--glass-2);
+  overflow: hidden;
+  flex: none;
+}
+.timebar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--mark-b), var(--accent));
+  transition: width 0.25s linear;
+}
+.timebar i.low {
+  background: var(--danger);
+}
+
+/* ───────── 채팅 기록 ───────── */
+.feed {
+  flex: 1;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 0.18);
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.feed.compact {
+  flex: none;
+  height: 70px;
+  min-height: 0;
+  padding: 6px 12px;
+}
+.feed > li:first-child {
+  margin-top: auto;
+}
+.feed li {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-all;
+}
+.feed-chat b {
+  margin-right: 6px;
+  color: var(--c);
+  font-weight: 700;
+}
+.feed-correct {
+  align-self: flex-start;
+  padding: 2px 9px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  font-weight: 600;
+}
+.feed-correct b {
+  color: var(--c);
+}
+.feed .feed-system {
+  color: var(--text-soft);
+  font-size: 12px;
+  text-align: center;
+}
+
+.guess-bar {
+  display: flex;
+  gap: 8px;
+}
+.guess-input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 14px;
+  background: var(--glass);
+  font-size: 16px;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.guess-input:focus,
+.guess-input:focus-visible {
+  outline: none;
+  border-color: rgb(185 166 255 / 0.6);
+  background: var(--glass-2);
+}
+.guess-bar .btn {
+  padding: 0 16px;
+}
+
+/* ───────── 그림 맞히기 ───────── */
+.word-bar {
+  gap: 10px;
+  padding: 0 12px 0 14px;
+}
+.word-bar.mine {
+  border-color: rgb(185 166 255 / 0.45);
+  background: var(--accent-soft);
+}
+.word-bar .word {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 19px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.word-bar .word.hint {
+  color: var(--accent);
+  letter-spacing: 4px;
+}
+.word-len {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-soft);
+}
+.word-bar .timer {
+  flex: none;
+  white-space: nowrap;
+}
+/* 초성퀴즈·그림 맞히기는 위쪽이 문제/그림이라 알림을 아래쪽에 */
+.app:has(.game-chosung) .toasts,
+.app:has(.game-drawing) .toasts {
+  top: auto;
+  bottom: 140px;
+}
+.word-turn {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.word-bar + .timebar {
+  margin-top: -6px;
+}
+.canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+.draw-canvas {
+  display: block;
+  width: min(100cqw, 100cqh);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  background: #f7f6fb;
+  box-shadow:
+    0 0 0 1px var(--stroke-2),
+    0 18px 40px rgb(0 0 0 / 0.35);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.draw-canvas.can-draw {
+  cursor: crosshair;
+}
+.canvas-hint {
+  position: absolute;
+  margin: 0;
+  color: #a5a3b8;
+  font-size: 15px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: var(--glass);
+}
+.swatches,
+.sizes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.swatch.on {
+  border-color: var(--text);
+  transform: scale(1.12);
+}
+.size,
+.tool {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--stroke);
+  border-radius: 9px;
+  background: var(--glass);
+  font-size: 14px;
+  cursor: pointer;
+}
+.size i {
+  display: block;
+  border-radius: 50%;
+}
+.size.on,
+.tool.on {
+  border-color: rgb(185 166 255 / 0.6);
+  background: var(--accent-soft);
+}
+.tool:active,
+.size:active {
+  transform: scale(0.92);
+}
+
 /* ───────── 알림 / 결과 ───────── */
 .toasts {
   position: absolute;

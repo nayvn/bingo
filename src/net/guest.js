@@ -118,6 +118,8 @@ export class GuestSession {
       this.on.poke(msg.from);
     } else if (msg.t === 'state') {
       this.on.state(msg.state);
+    } else if (msg.t === 'ink') {
+      this.on.ink(msg);
     } else if (msg.t === 'notice') {
       this.on.notice(msg.text);
     } else if (msg.t === 'closed') {
@@ -142,6 +144,11 @@ export class GuestSession {
         resolve({ ok: false, error: '응답이 없어요' });
       }, REQUEST_TIMEOUT_MS);
     });
+  }
+
+  // 그림 조각은 응답을 기다리지 않고 보낸다
+  ink(op) {
+    if (this.conn?.open) this.conn.send({ t: 'ink', op });
   }
 
   _fail(message) {

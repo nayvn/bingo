@@ -10,6 +10,8 @@ const REMOVE_AFTER_MS = 60_000;
 const POKE_COOLDOWN_MS = 2_500;
 // 마감 후 각자 화면이 알아서 채우고 준비하는데, 그래도 안 되면(앱이 백그라운드 등) 방장이 대신 채운다
 const FORCE_FILL_GRACE_MS = 12_000;
+// 초성퀴즈·그림 맞히기의 시간 흐름(문제 시간, 힌트, 다음 차례)을 확인하는 간격
+const TICK_MS = 250;
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function newRoomCode() {
@@ -38,7 +40,7 @@ export class HostSession {
     this.name = name;
     this.on = on;
     this.fresh = !savedRoom;
-    this.room = savedRoom ?? L.createRoom(code);
+    this.room = savedRoom ? L.restoreRoom(savedRoom) : L.createRoom(code);
     this.code = this.room.code;
     this.conns = new Map(); // playerId -> DataConnection
     this.timers = new Map();
@@ -75,6 +77,11 @@ export class HostSession {
         }
       }
       this._broadcast();
+      const ink = this._inkSnapshot();
+      if (ink) this.on.ink(ink);
+      this.ticker = setInterval(() => {
+        if (!this.destroyed && L.tick(this.room, Date.now())) this._broadcast();
+      }, TICK_MS);
       this._resolve();
     });
 
@@ -120,6 +127,11 @@ export class HostSession {
   }
 
   _onMessage(conn, msg) {
+    // 그림 조각은 응답 없이 바로 다른 사람에게 전달
+    if (msg?.t === 'ink') {
+      if (conn.playerId) this._ink(conn.playerId, msg.op);
+      return;
+    }
     if (!msg || msg.t !== 'req') return;
     const { id, action } = msg;
     let res;
@@ -158,6 +170,11 @@ export class HostSession {
 
     if (conn.open) conn.send({ t: 'res', id, ok: res.ok, error: res.error, names: res.names });
     if (res.ok && action?.type !== 'poke') this._broadcast();
+    if (res.ok && action?.type === 'join') {
+      // 다시 들어온 사람에게 지금까지 그린 그림을 통째로
+      const ink = this._inkSnapshot();
+      if (ink && conn.open) conn.send(ink);
+    }
     if (notice) this._notify(notice);
   }
 
@@ -209,6 +226,29 @@ export class HostSession {
     this._broadcast();
   }
 
+  _inkSnapshot() {
+    const d = this.room.draw;
+    return this.room.game === 'drawing' && d ? { t: 'ink', key: d.key, full: d.ink } : null;
+  }
+
+  _ink(fromId, op) {
+    const out = L.applyInk(this.room, fromId, op);
+    if (!out) return;
+    for (const p of this.room.players) if (p.id !== fromId) this._deliver(p.id, { t: 'ink', op: out });
+    // 그림은 자주 오니까 저장은 몰아서
+    if (!this.saveTimer) {
+      this.saveTimer = setTimeout(() => {
+        this.saveTimer = null;
+        if (!this.destroyed) tabStore.set(HOST_ROOM_KEY, this.room);
+      }, 1000);
+    }
+  }
+
+  // 내가 그린 그림 조각 (내 화면엔 이미 그려져 있음)
+  ink(op) {
+    this._ink(this.playerId, op);
+  }
+
   _broadcast() {
     if (this.destroyed) return;
     this._syncDeadline();
@@ -250,6 +290,7 @@ export class HostSession {
   _deliver(pid, msg) {
     if (pid === this.playerId) {
       if (msg.t === 'poke') this.on.poke(msg.from);
+      else if (msg.t === 'ink') this.on.ink(msg);
       else this.on.notice(msg.text);
       return;
     }
@@ -281,6 +322,8 @@ export class HostSession {
     this.destroyed = true;
     this.timers.forEach(clearTimeout);
     clearTimeout(this.deadlineTimer);
+    clearTimeout(this.saveTimer);
+    clearInterval(this.ticker);
     setTimeout(() => peer?.destroy(), 300);
   }
 
@@ -288,6 +331,8 @@ export class HostSession {
     this.destroyed = true;
     this.timers.forEach(clearTimeout);
     clearTimeout(this.deadlineTimer);
+    clearTimeout(this.saveTimer);
+    clearInterval(this.ticker);
     this.peer?.destroy();
   }
 }

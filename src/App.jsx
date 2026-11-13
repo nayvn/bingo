@@ -32,6 +32,7 @@ export default function App() {
           send={bingo.send}
           leave={bingo.leave}
           toast={bingo.toast}
+          ink={bingo.ink}
         />
       ) : inRoom ? (
         <div className="loading">방에 들어가는 중…</div>

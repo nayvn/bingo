@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GuestSession } from './guest.js';
 import { HOST_ROOM_KEY, HostSession, newRoomCode } from './host.js';
+import { createInkStore } from './inkStore.js';
 import { getPlayerId, tabStore } from './storage.js';
 
 const SESSION_KEY = 'bingo.session';
@@ -16,6 +17,8 @@ export function useBingo() {
   const [poke, setPoke] = useState(null); // 누가 나를 쪼았는지 { from, id }
   const sessionRef = useRef(null);
   const playerIdRef = useRef(getPlayerId());
+  const inkRef = useRef(null);
+  if (!inkRef.current) inkRef.current = createInkStore();
 
   const toast = useCallback((text) => {
     const id = Math.random();
@@ -43,6 +46,7 @@ export function useBingo() {
         status: (s) => sessionRef.current === session && setNet(s),
         notice: (text) => sessionRef.current === session && toast(text),
         poke: (from) => sessionRef.current === session && setPoke({ from, id: Math.random() }),
+        ink: (msg) => sessionRef.current === session && inkRef.current.apply(msg),
         closed: (message) => sessionRef.current === session && reset(message),
       };
       const Session = role === 'host' ? HostSession : GuestSession;
@@ -75,6 +79,13 @@ export function useBingo() {
     [],
   );
 
+  // 그림 맞히기: 내가 그린 조각은 내 그림판에 먼저 그리고, 방으로 보낸다
+  const sendInk = useCallback((op) => {
+    inkRef.current.apply({ op });
+    sessionRef.current?.ink(op);
+  }, []);
+  const ink = useMemo(() => ({ store: inkRef.current, send: sendInk }), [sendInk]);
+
   // 새로고침해도 같은 방으로 돌아가기
   const resumed = useRef(false);
   useEffect(() => {
@@ -103,6 +114,7 @@ export function useBingo() {
     join,
     leave,
     send,
+    ink,
     role,
   };
 }
