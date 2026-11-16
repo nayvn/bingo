@@ -64,38 +64,6 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.phase]);
 
-  // ── 쪼기: 준비 안 한 사람 / 내 차례 아닌데 오래 고민하는(그리는) 사람 재촉 ──
-  const hasTurn = bingo || (view.game === 'drawing' && ['pick', 'draw'].includes(view.draw?.stage));
-  const slowpokes = lobby
-    ? me?.ready
-      ? view.players.filter((p) => p.id !== myId && !p.ready && p.connected)
-      : []
-    : playing && hasTurn && !myTurn && turnPlayer?.connected
-      ? [turnPlayer]
-      : [];
-  const [pokeCooling, setPokeCooling] = useState(false);
-  const pokeTimer = useRef(null);
-  useEffect(() => () => clearTimeout(pokeTimer.current), []);
-  const poke = async () => {
-    if (pokeCooling) return;
-    setPokeCooling(true);
-    clearTimeout(pokeTimer.current);
-    pokeTimer.current = setTimeout(() => setPokeCooling(false), 2500);
-    const res = await send({ type: 'poke' });
-    if (res.ok) toast(`${res.names.join(', ')}님을 쪼았어요 👉`);
-    else toast(res.error);
-  };
-  const pokeButton = slowpokes.length > 0 && (
-    <button
-      className={`btn poke ${pokeCooling ? '' : 'wiggle'}`}
-      disabled={pokeCooling}
-      onClick={poke}
-      title={`${slowpokes.map((p) => p.name).join(', ')}님 재촉하기`}
-    >
-      👉 쪼기
-    </button>
-  );
-
   // ── 결과 창: 빙고는 줄 긋는 애니메이션을 본 뒤 띄우기 ──
   const [showResult, setShowResult] = useState(false);
   useEffect(() => {
@@ -233,7 +201,6 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
         toast={toast}
         net={net}
         ink={ink}
-        pokeButton={pokeButton}
         colorOf={colorOf}
         myTurn={myTurn}
         turnPlayer={turnPlayer}

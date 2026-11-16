@@ -57,7 +57,7 @@ function PickBar({ onPick, busy }) {
 }
 
 export default function DrawGame(props) {
-  const { view, myId, send, run, busy, toast, colorOf, pokeButton, ink } = props;
+  const { view, myId, send, run, busy, toast, colorOf, ink } = props;
   const d = view.draw;
   const playing = view.phase === 'playing';
   const { msLeft, secondsLeft } = useCountdown(d?.timeLeft ?? null, view);
@@ -206,7 +206,6 @@ export default function DrawGame(props) {
       <GuessBar
         onSend={guess}
         placeholder={drawing ? '정답 입력 후 Enter' : '채팅…'}
-        extra={drawing || picking ? pokeButton : null}
       />
     );
   }

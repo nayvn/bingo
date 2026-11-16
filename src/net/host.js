@@ -8,7 +8,6 @@ import { tabStore } from './storage.js';
 export const PEER_PREFIX = 'nayvn-bingo-v1-';
 export const HOST_ROOM_KEY = 'bingo.hostRoom';
 const REMOVE_AFTER_MS = 60_000;
-const POKE_COOLDOWN_MS = 2_500;
 // 마감 후 각자 화면이 알아서 채우고 준비하는데, 그래도 안 되면(앱이 백그라운드 등) 방장이 대신 채운다
 const FORCE_FILL_GRACE_MS = 12_000;
 // 초성퀴즈·그림 맞히기의 시간 흐름(문제 시간, 힌트, 다음 차례)을 확인하는 간격
@@ -45,7 +44,6 @@ export class HostSession {
     this.code = this.room.code;
     this.conns = new Map(); // playerId -> DataConnection
     this.timers = new Map();
-    this.pokedAt = new Map(); // playerId -> 마지막으로 쪼은 시각
     this.destroyed = false;
     this.started = false;
     this.attempts = 0;
@@ -163,8 +161,6 @@ export class HostSession {
       this.conns.delete(conn.playerId);
       conn.replaced = true;
       res = { ok: true };
-    } else if (action?.type === 'poke') {
-      res = this._poke(conn.playerId);
     } else if (action?.type === 'race') {
       // 사전 확인이 끝나면 따로 응답
       this._raceWord(conn.playerId, action.text).then((r) => {
@@ -176,7 +172,7 @@ export class HostSession {
     }
 
     if (conn.open) conn.send({ t: 'res', id, ok: res.ok, error: res.error, names: res.names });
-    if (res.ok && action?.type !== 'poke') this._broadcast();
+    if (res.ok) this._broadcast();
     if (res.ok && action?.type === 'join') {
       // 다시 들어온 사람에게 지금까지 그린 그림을 통째로
       const ink = this._inkSnapshot();
@@ -289,33 +285,9 @@ export class HostSession {
     }
   }
 
-  // 쪼기: 대상에게는 'poke', 나머지 구경꾼에게는 알림만
-  _poke(fromId) {
-    const now = Date.now();
-    if (now - (this.pokedAt.get(fromId) ?? 0) < POKE_COOLDOWN_MS) {
-      return { ok: false, error: '조금만 쉬었다가 또 쪼아요 😅' };
-    }
-    const { targets, error } = L.pokeTargets(this.room, fromId);
-    if (error) return { ok: false, error };
-    this.pokedAt.set(fromId, now);
-
-    const nameOf = (id) => this.room.players.find((p) => p.id === id)?.name ?? '';
-    const from = nameOf(fromId);
-    const names = targets.map(nameOf);
-    for (const p of this.room.players) {
-      if (p.id === fromId) continue;
-      const msg = targets.includes(p.id)
-        ? { t: 'poke', from }
-        : { t: 'notice', text: `${from}님이 ${names.join(', ')}님을 쪼았어요 👉` };
-      this._deliver(p.id, msg);
-    }
-    return { ok: true, names };
-  }
-
   _deliver(pid, msg) {
     if (pid === this.playerId) {
-      if (msg.t === 'poke') this.on.poke(msg.from);
-      else if (msg.t === 'ink') this.on.ink(msg);
+      if (msg.t === 'ink') this.on.ink(msg);
       else this.on.notice(msg.text);
       return;
     }
@@ -333,7 +305,6 @@ export class HostSession {
       this.closeRoom();
       return Promise.resolve({ ok: true });
     }
-    if (action?.type === 'poke') return Promise.resolve(this._poke(this.playerId));
     if (action?.type === 'race') return this._raceWord(this.playerId, action.text);
     const res = L.applyAction(this.room, this.playerId, action);
     if (res.ok) this._broadcast();

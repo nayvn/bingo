@@ -75,7 +75,7 @@ export function GuessBar({ onSend, placeholder, disabled = false, extra = null, 
 }
 
 // 초성퀴즈·그림 맞히기 대기실: 설정 + 규칙 + 준비 버튼
-export function GameLobby({ icon, title, rules, settings, view, me, run, busy, net, pokeButton }) {
+export function GameLobby({ icon, title, rules, settings, view, me, run, busy, net }) {
   const readyCount = view.players.filter((p) => p.ready).length;
   const waiting = view.players.length < MIN_PLAYERS;
   return (
@@ -107,7 +107,6 @@ export function GameLobby({ icon, title, rules, settings, view, me, run, busy, n
       </div>
       <footer className="footer">
         <div className="bar">
-          {pokeButton}
           <button
             className={`btn grow ${me?.ready ? 'ghost' : 'primary'}`}
             disabled={busy}

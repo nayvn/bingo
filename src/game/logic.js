@@ -378,26 +378,6 @@ export function applyInk(room, id, op) {
   return room.game === 'drawing' ? Draw.applyInk(room, id, op) : null;
 }
 
-// 쪼기: 대기실에선 (내가 준비됐을 때) 아직 준비 안 한 사람들, 게임 중엔 지금 차례인 사람
-export function pokeTargets(room, fromId) {
-  const me = findPlayer(room, fromId);
-  if (!me) return { error: '방에 참여하지 않았어요' };
-  if (room.phase === 'lobby') {
-    if (!me.ready) return { error: '나부터 준비해야 쪼을 수 있어요' };
-    const targets = room.players.filter((p) => p.id !== fromId && !p.ready && p.connected);
-    if (!targets.length) return { error: '쪼을 사람이 없어요' };
-    return { targets: targets.map((p) => p.id) };
-  }
-  const hasTurn = room.game === 'bingo' || (room.game === 'drawing' && ['pick', 'draw'].includes(room.draw?.stage));
-  if (room.phase === 'playing' && hasTurn) {
-    if (room.turnId === fromId) return { error: '지금은 내 차례예요' };
-    const t = findPlayer(room, room.turnId);
-    if (!t?.connected) return { error: '쪼을 사람이 없어요' };
-    return { targets: [t.id] };
-  }
-  return { error: '지금은 쪼을 수 없어요' };
-}
-
 // 참가자 한 명에게 보낼 상태. 다른 사람의 빙고판·정답·제시어는 포함하지 않는다.
 // 방장 화면도 이 값을 그대로 쓰므로, 방 상태와 배열을 공유하지 않게 복사본을 만든다.
 export function viewFor(room, id, now = Date.now()) {

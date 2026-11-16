@@ -19,7 +19,7 @@ import { Timer, useCountdown } from '../useCountdown.jsx';
 
 const emptyBoard = () => Array(CELLS).fill('');
 
-export default function BingoGame({ view, me, myId, send, run, busy, toast, net, pokeButton, colorOf, myTurn, turnPlayer }) {
+export default function BingoGame({ view, me, myId, send, run, busy, toast, net, colorOf, myTurn, turnPlayer }) {
   const lobby = view.phase === 'lobby';
   const playing = view.phase === 'playing';
 
@@ -288,7 +288,6 @@ export default function BingoGame({ view, me, myId, send, run, busy, toast, net,
                 </button>
               </>
             )}
-            {pokeButton}
             <button className={`btn grow ${me?.ready ? 'ghost' : 'primary'}`} disabled={busy} onClick={toggleReady}>
               {me?.ready ? '준비 취소' : '준비 완료'}
             </button>
@@ -301,7 +300,6 @@ export default function BingoGame({ view, me, myId, send, run, busy, toast, net,
             <div className={`turn-banner ${myTurn ? 'mine' : ''}`}>
               {myTurn ? '👆 빙고판에서 부를 칸을 눌러요' : `${turnPlayer?.name ?? ''}님이 고르는 중…`}
             </div>
-            {!myTurn && pokeButton}
           </div>
         </footer>
       )}
