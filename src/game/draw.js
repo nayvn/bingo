@@ -1,7 +1,6 @@
-// 그림 맞히기: 한 명이 제시어를 그리고 나머지가 맞힌다. 그리는 사람은 돌아가며 바뀐다.
-// 먼저 맞히면 +3, 다음은 +2 … 그린 사람도 맞힌 사람 1명당 +1.
+// 그림 맞히기: 그리는 사람이 직접 단어를 정해서 그리고, 나머지가 맞힌다.
+// 그리는 사람은 돌아가며 바뀐다. 먼저 맞히면 +3, 다음은 +2 … 그린 사람도 맞힌 사람 1명당 +1.
 import {
-  MAX_WORD,
   OK,
   answerKey,
   clean,
@@ -14,12 +13,14 @@ import {
 } from './common.js';
 import { DRAW_WORDS } from './words.js';
 
+// 단어 정하는 시간. 안 정하면 랜덤 단어로 시작
+export const DRAW_PICK_MS = 20_000;
 export const DRAW_MS = 80_000;
 export const DRAW_REVEAL_MS = 4_000;
 // 40초가 지나면 초성, 60초가 지나면 첫 글자까지 힌트로 보여 준다
 export const DRAW_HINT_AT = [40_000, 60_000];
 export const DRAW_ROUND_OPTIONS = [1, 2, 3];
-export const MAX_REROLLS = 2;
+export const MAX_DRAW_WORD = 12;
 // 그리는 사람이 연결이 끊겨도 잠깐은 기다려 준다 (새로고침 등)
 const DRAWER_GRACE_MS = 10_000;
 
@@ -31,18 +32,14 @@ export const ERASER_SIZE = 40;
 const MAX_SEGS = 6000;
 const MAX_POINTS = 400;
 
+// 글자 수: 띄어쓰기는 빼고 센다
+export const letterCount = (word) => [...String(word ?? '').replace(/\s/g, '')].length;
+
 export function startDrawing(room, seat, now) {
   const ids = room.players.map((p) => p.id);
   const order = [...ids.slice(seat), ...ids.slice(0, seat)];
-  room.draw = { order, turns: order.length * room.drawRounds, turn: -1, used: [], log: [], seq: 0, ink: [] };
+  room.draw = { order, turns: order.length * room.drawRounds, turn: -1, log: [], seq: 0, ink: [] };
   nextTurn(room, now);
-}
-
-function pickWord(d) {
-  const pool = DRAW_WORDS.filter((w) => !d.used.includes(w));
-  const word = pickOne(pool.length ? pool : DRAW_WORDS);
-  d.used.push(word);
-  return word;
 }
 
 function nextTurn(room, now) {
@@ -60,27 +57,41 @@ function nextTurn(room, now) {
   }
   d.drawerId = drawer.id;
   room.turnId = drawer.id;
-  d.word = pickWord(d);
-  d.rerolls = 0;
-  d.stage = 'draw';
+  d.word = null;
+  d.stage = 'pick';
+  d.pickEndsAt = now + DRAW_PICK_MS;
   d.guessed = [];
   d.lostAt = null;
-  newCanvas(d, now);
-  pushLog(d, { kind: 'system', text: `🎨 ${drawer.name}님이 그릴 차례예요` });
+  d.hint = 0;
+  d.ink = [];
+  d.key = String(d.turn);
+  pushLog(d, { kind: 'system', text: `🎨 ${drawer.name}님이 그릴 단어를 고르는 중…` });
 }
 
-function newCanvas(d, now) {
-  d.ink = [];
-  d.key = `${d.turn}.${d.rerolls}`;
+function startDraw(room, word, now, random = false) {
+  const d = room.draw;
+  d.word = word;
+  d.stage = 'draw';
   d.startedAt = now;
   d.endsAt = now + DRAW_MS;
   d.hint = 0;
+  const name = room.players.find((x) => x.id === d.drawerId)?.name ?? '';
+  pushLog(d, {
+    kind: 'system',
+    text: random ? `⏰ ${name}님이 안 골라서 랜덤 단어로 시작해요` : `✏️ ${name}님이 그리기 시작! (${letterCount(word)}글자)`,
+  });
 }
 
 function endTurn(room, now, why) {
   const d = room.draw;
+  const picked = !!d.word;
   d.stage = 'reveal';
   d.revealUntil = now + DRAW_REVEAL_MS;
+  if (!picked) {
+    // 단어를 정하기 전에 나가 버림
+    pushLog(d, { kind: 'system', text: '그리는 사람이 나가서 다음 차례로 넘어가요' });
+    return;
+  }
   const head = { all: '모두 맞혔어요!', time: '⏰ 시간 끝!', left: '그리는 사람이 나갔어요.' }[why];
   pushLog(d, { kind: 'system', text: `${head} 정답은 '${d.word}'` });
 }
@@ -88,9 +99,19 @@ function endTurn(room, now, why) {
 const guessersLeft = (room) =>
   room.players.filter((x) => x.connected && x.id !== room.draw.drawerId && !room.draw.guessed.includes(x.id));
 
+/** 그리는 사람이 그릴 단어를 정한다 */
+export function drawPick(room, p, text, now) {
+  const d = room.draw;
+  if (d.stage !== 'pick' || d.drawerId !== p.id) return fail('지금은 단어를 정할 수 없어요');
+  const word = clean(text, MAX_DRAW_WORD).replace(/\s+/g, ' ');
+  if (!answerKey(word)) return fail('그릴 단어를 입력해 주세요');
+  startDraw(room, word, now);
+  return OK;
+}
+
 export function drawGuess(room, p, text, now) {
   const d = room.draw;
-  const word = clean(text, MAX_WORD);
+  const word = clean(text, 20);
   if (!word) return fail('정답을 입력해 주세요');
   if (d.stage === 'draw') {
     if (p.id === d.drawerId) return fail('그리는 사람은 채팅할 수 없어요');
@@ -110,21 +131,10 @@ export function drawGuess(room, p, text, now) {
   return OK;
 }
 
-export function drawReroll(room, p, now) {
-  const d = room.draw;
-  if (d.stage !== 'draw' || d.drawerId !== p.id) return fail('지금은 바꿀 수 없어요');
-  if (d.guessed.length) return fail('벌써 맞힌 사람이 있어요');
-  if (d.rerolls >= MAX_REROLLS) return fail('더는 바꿀 수 없어요');
-  d.rerolls += 1;
-  d.word = pickWord(d);
-  newCanvas(d, now);
-  return OK;
-}
-
 export function drawTick(room, now) {
   const d = room.draw;
   if (!d) return false;
-  if (d.stage === 'draw') {
+  if (d.stage === 'pick' || d.stage === 'draw') {
     const drawer = room.players.find((x) => x.id === d.drawerId);
     if (!drawer?.connected) {
       d.lostAt ??= now;
@@ -135,6 +145,15 @@ export function drawTick(room, now) {
     } else {
       d.lostAt = null;
     }
+  }
+  if (d.stage === 'pick') {
+    if (now >= d.pickEndsAt) {
+      startDraw(room, pickOne(DRAW_WORDS), now, true);
+      return true;
+    }
+    return false;
+  }
+  if (d.stage === 'draw') {
     if (now >= d.endsAt) {
       endTurn(room, now, 'time');
       return true;
@@ -193,22 +212,26 @@ export function applyInk(room, id, op) {
 export function drawView(room, id, now) {
   const d = room.draw;
   if (!d) return null;
-  const shown = d.stage === 'reveal' || room.phase === 'ended';
+  const ended = room.phase === 'ended';
+  const stage = d.stage === 'reveal' || ended ? 'reveal' : d.stage;
   const isDrawer = id === d.drawerId;
+  const live = room.phase === 'playing';
+  let timeLeft = null;
+  if (live && stage === 'pick') timeLeft = Math.max(0, d.pickEndsAt - now);
+  if (live && stage === 'draw') timeLeft = Math.max(0, d.endsAt - now);
   return {
     turn: d.turn + 1,
     turns: d.turns,
     drawerId: d.drawerId,
-    stage: shown ? 'reveal' : 'draw',
-    // 그리는 사람에게만 제시어를 보낸다
-    word: shown || isDrawer ? d.word : null,
-    hint: shown ? d.word : maskWord(d.word, d.hint >= 2 ? [0] : [], d.hint >= 1 ? 'cho' : 'blank'),
-    length: [...d.word].length,
-    timeLeft: !shown && room.phase === 'playing' ? Math.max(0, d.endsAt - now) : null,
-    roundMs: DRAW_MS,
+    stage, // pick | draw | reveal
+    // 단어는 그리는 사람에게만 (다 끝나면 모두에게)
+    word: stage === 'reveal' || isDrawer ? d.word : null,
+    hint: !d.word ? null : stage === 'reveal' ? d.word : maskWord(d.word, d.hint >= 2 ? [0] : [], d.hint >= 1 ? 'cho' : 'blank'),
+    length: d.word ? letterCount(d.word) : null,
+    timeLeft,
+    roundMs: stage === 'pick' ? DRAW_PICK_MS : DRAW_MS,
     guessed: [...d.guessed],
     key: d.key,
-    rerollsLeft: isDrawer && !shown && !d.guessed.length ? MAX_REROLLS - d.rerolls : 0,
     log: logView(d.log),
   };
 }

@@ -31,7 +31,8 @@ export function maskWord(word, open = [], hideAs = 'cho') {
   return [...word]
     .map((ch, i) => {
       if (ch === ' ' || open.includes(i)) return ch;
-      return hideAs === 'blank' ? '○' : choOf(ch);
+      // 한글이 아닌 글자(영어·숫자)는 초성이 없으니 그냥 가린다
+      return hideAs === 'blank' || syllable(ch) < 0 ? '○' : choOf(ch);
     })
     .join('');
 }

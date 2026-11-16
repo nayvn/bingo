@@ -313,9 +313,9 @@ export function applyAction(room, id, action, now = Date.now()) {
       if (room.game === 'drawing') return Draw.drawGuess(room, p, action.text, now);
       return fail('알 수 없는 요청이에요');
     }
-    case 'reroll': {
-      if (room.phase !== 'playing' || room.game !== 'drawing') return fail('지금은 바꿀 수 없어요');
-      return Draw.drawReroll(room, p, now);
+    case 'pick': {
+      if (room.phase !== 'playing' || room.game !== 'drawing') return fail('지금은 단어를 정할 수 없어요');
+      return Draw.drawPick(room, p, action.text, now);
     }
     case 'restart': {
       if (room.phase !== 'ended') return fail('게임이 아직 안 끝났어요');
@@ -349,7 +349,7 @@ export function pokeTargets(room, fromId) {
     if (!targets.length) return { error: '쪼을 사람이 없어요' };
     return { targets: targets.map((p) => p.id) };
   }
-  const hasTurn = room.game === 'bingo' || (room.game === 'drawing' && room.draw?.stage === 'draw');
+  const hasTurn = room.game === 'bingo' || (room.game === 'drawing' && ['pick', 'draw'].includes(room.draw?.stage));
   if (room.phase === 'playing' && hasTurn) {
     if (room.turnId === fromId) return { error: '지금은 내 차례예요' };
     const t = findPlayer(room, room.turnId);

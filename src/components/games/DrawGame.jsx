@@ -1,15 +1,59 @@
 import { useEffect, useRef, useState } from 'react';
-import { DRAW_ROUND_OPTIONS, ERASER_SIZE, PALETTE, PAPER, SIZES } from '../../game/draw.js';
+import { pickOne } from '../../game/common.js';
+import { DRAW_ROUND_OPTIONS, ERASER_SIZE, MAX_DRAW_WORD, PALETTE, PAPER, SIZES } from '../../game/draw.js';
+import { DRAW_WORDS } from '../../game/words.js';
 import DrawCanvas from '../DrawCanvas.jsx';
 import { TimeBar, Timer, useCountdown } from '../useCountdown.jsx';
 import { Feed, GameLobby, GuessBar, Select } from './parts.jsx';
 
 const RULES = [
-  '한 명이 제시어를 그리면 나머지가 맞혀요',
-  '그리는 사람은 돌아가면서 바뀌어요 · 한 번에 80초',
+  '내 차례가 오면 그릴 단어를 직접 정해요 (20초, 안 정하면 랜덤)',
+  '다른 사람은 글자 수만 보고 그림을 맞혀요 · 한 번에 80초',
   '먼저 맞히면 +3점, 다음 사람은 +2점',
   '그린 사람도 맞힌 사람 1명당 +1점 · 40초 뒤엔 초성 힌트',
 ];
+
+// 그릴 단어 정하기: 직접 입력하거나 🎲로 아무 단어나
+function PickBar({ onPick, busy }) {
+  const [text, setText] = useState('');
+  const ref = useRef(null);
+  const submit = () => {
+    if (text.trim() && !busy) onPick(text.trim());
+  };
+  return (
+    <div className="guess-bar">
+      <input
+        ref={ref}
+        className="guess-input"
+        value={text}
+        maxLength={MAX_DRAW_WORD}
+        placeholder="그릴 단어 입력 (남들은 몰라요)"
+        autoFocus
+        autoComplete="off"
+        enterKeyHint="done"
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+          e.preventDefault();
+          submit();
+        }}
+      />
+      <button
+        className="btn ghost"
+        title="아무 단어나 넣기"
+        onClick={() => {
+          setText(pickOne(DRAW_WORDS));
+          ref.current?.focus();
+        }}
+      >
+        🎲
+      </button>
+      <button className="btn primary" disabled={busy || !text.trim()} onClick={submit}>
+        그리기 시작
+      </button>
+    </div>
+  );
+}
 
 export default function DrawGame(props) {
   const { view, myId, send, run, busy, toast, colorOf, pokeButton, ink } = props;
@@ -36,7 +80,7 @@ export default function DrawGame(props) {
   useEffect(() => {
     if (!d || !playing || prevTurn.current === d.turn) return;
     prevTurn.current = d.turn;
-    toast(isDrawer ? '🎨 내가 그릴 차례예요! 제시어를 그려 주세요' : `🎨 ${drawer?.name ?? ''}님이 그릴 차례예요`);
+    toast(isDrawer ? '🎨 내 차례! 그릴 단어를 정해 주세요' : `🎨 ${drawer?.name ?? ''}님이 그릴 차례예요`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d?.turn, playing]);
 
@@ -59,35 +103,38 @@ export default function DrawGame(props) {
     );
   }
 
+  const picking = playing && d.stage === 'pick';
   const drawing = playing && d.stage === 'draw';
   const guessed = d.guessed.includes(myId);
   const guess = async (text) => {
     const res = await send({ type: 'guess', text });
     if (!res.ok) toast(res.error);
   };
-  const reroll = () => {
-    if (ink.store.get().segs.length && !window.confirm('그린 그림이 지워져요. 제시어를 바꿀까요?')) return;
-    run({ type: 'reroll' });
-  };
+  const pick = (text) => run({ type: 'pick', text });
 
   let word;
-  if (!drawing) {
+  if (picking) {
+    word = (
+      <>
+        <span className="topic-label">{isDrawer ? '내 차례' : `${drawer?.name ?? ''}님`}</span>
+        <b className="word waiting">{isDrawer ? '그릴 단어를 정해 주세요' : '그릴 단어 고르는 중…'}</b>
+      </>
+    );
+  } else if (!drawing) {
     word = (
       <>
         <span className="topic-label">정답</span>
-        <b className="word">{d.word}</b>
+        <b className="word">{d.word ?? '—'}</b>
       </>
     );
   } else if (isDrawer) {
     word = (
       <>
         <span className="topic-label">제시어</span>
-        <b className="word">{d.word}</b>
-        {d.rerollsLeft > 0 && (
-          <button className="suggest-btn" disabled={busy} onClick={reroll} title="다른 제시어로 바꾸기">
-            🔄 바꾸기 {d.rerollsLeft}
-          </button>
-        )}
+        <b className="word">
+          {d.word}
+          <small className="word-len">{d.length}글자</small>
+        </b>
       </>
     );
   } else {
@@ -103,7 +150,9 @@ export default function DrawGame(props) {
   }
 
   let footer = null;
-  if (drawing && isDrawer) {
+  if (picking && isDrawer) {
+    footer = <PickBar onPick={pick} busy={busy} />;
+  } else if (drawing && isDrawer) {
     footer = (
       <div className="tools">
         <div className="swatches">
@@ -160,25 +209,29 @@ export default function DrawGame(props) {
       <GuessBar
         onSend={guess}
         placeholder={drawing ? '정답 입력 후 Enter' : '채팅…'}
-        extra={drawing ? pokeButton : null}
+        extra={drawing || picking ? pokeButton : null}
       />
     );
   }
 
   return (
     <>
-      <div className={`topic-row word-bar ${isDrawer && drawing ? 'mine' : ''}`}>
+      <div className={`topic-row word-bar ${isDrawer && (drawing || picking) ? 'mine' : ''}`}>
         {word}
         <span className="word-turn">
           {d.turn}/{d.turns}
         </span>
         {drawing && <Timer seconds={secondsLeft} soon={20} urgent={10} />}
+        {picking && <Timer seconds={secondsLeft} soon={10} urgent={5} />}
       </div>
-      <TimeBar msLeft={drawing ? msLeft : 0} total={d.roundMs} />
+      <TimeBar msLeft={drawing || picking ? msLeft : 0} total={d.roundMs} />
 
       <div className="canvas-wrap">
         <DrawCanvas store={ink.store} canDraw={drawing && isDrawer} color={color} size={size} onOp={ink.send} />
         {drawing && isDrawer && blank && <p className="canvas-hint">여기에 그려요 ✏️</p>}
+        {picking && (
+          <p className="canvas-hint">{isDrawer ? '단어를 정하면 그릴 수 있어요' : '곧 그림이 시작돼요 👀'}</p>
+        )}
       </div>
 
       <Feed log={d.log} colorOf={colorOf} compact empty="정답을 맞혀 보세요!" />

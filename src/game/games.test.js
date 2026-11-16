@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chosung, maskWord } from './common.js';
-import { DRAW_HINT_AT, DRAW_MS, DRAW_REVEAL_MS, PALETTE, SIZES } from './draw.js';
+import { DRAW_HINT_AT, DRAW_MS, DRAW_PICK_MS, DRAW_REVEAL_MS, PALETTE, SIZES } from './draw.js';
 import { applyAction, applyInk, createRoom, joinPlayer, removePlayer, setDisconnected, tick, viewFor } from './logic.js';
 import { QUIZ_HINT_MS, QUIZ_REVEAL_MS, QUIZ_ROUND_MS, isQuizAnswer } from './quiz.js';
 
@@ -99,12 +99,45 @@ describe('초성퀴즈', () => {
 });
 
 describe('그림 맞히기', () => {
-  const start = () => {
+  // 시작 → 그리는 사람이 단어를 정한 상태까지
+  const start = (word = '고양이') => {
     const room = room3('drawing');
     applyAction(room, 'a', { type: 'rounds', n: 1 }, 0);
     readyAll(room, 0);
+    expect(room.draw.stage).toBe('pick');
+    expect(applyAction(room, room.draw.drawerId, { type: 'pick', text: word }, 0).ok).toBe(true);
     return room;
   };
+
+  it('lets only the drawer pick the word, and picks a random one when time runs out', () => {
+    const room = room3('drawing');
+    readyAll(room, 0);
+    const d = room.draw;
+    const g = room.players.find((p) => p.id !== d.drawerId).id;
+    expect(viewFor(room, g, 0).draw).toMatchObject({ stage: 'pick', word: null, hint: null, length: null });
+    expect(applyAction(room, g, { type: 'pick', text: '사과' }, 0).ok).toBe(false);
+    expect(applyAction(room, d.drawerId, { type: 'pick', text: '  !! ' }, 0).ok).toBe(false);
+    // 단어를 정하기 전엔 그릴 수 없음
+    expect(applyInk(room, d.drawerId, { key: d.key, seg: { s: 1, c: PALETTE[0], w: SIZES[0], p: [1, 1] } })).toBeNull();
+    expect(tick(room, DRAW_PICK_MS - 1)).toBe(false);
+    expect(tick(room, DRAW_PICK_MS)).toBe(true);
+    expect(d.stage).toBe('draw');
+    expect(d.word).toBeTruthy();
+    expect(d.endsAt).toBe(DRAW_PICK_MS + DRAW_MS);
+  });
+
+  it('counts letters without spaces and hides non-Korean letters in hints', () => {
+    const room = start('아이스 커피');
+    const g = room.players.find((p) => p.id !== room.draw.drawerId).id;
+    expect(viewFor(room, g, 0).draw).toMatchObject({ length: 5, hint: '○○○ ○○' });
+    expect(viewFor(room, room.draw.drawerId, 0).draw.word).toBe('아이스 커피');
+    const r2 = start('BTS 노래');
+    const g2 = r2.players.find((p) => p.id !== r2.draw.drawerId).id;
+    tick(r2, DRAW_HINT_AT[0]);
+    expect(viewFor(r2, g2).draw.hint).toBe('○○○ ㄴㄹ');
+    expect(applyAction(r2, g2, { type: 'guess', text: 'bts노래' }, DRAW_HINT_AT[0]).ok).toBe(true);
+    expect(r2.draw.guessed).toEqual([g2]);
+  });
 
   it('shows the word only to the drawer', () => {
     const room = start();
@@ -163,10 +196,6 @@ describe('그림 맞히기', () => {
     expect(d.ink.map((x) => x.s)).toEqual([1, 1]);
     applyInk(room, d.drawerId, { key: d.key, clear: true });
     expect(d.ink).toHaveLength(0);
-    // 제시어를 바꾸면 새 그림판
-    const before = d.key;
-    expect(applyAction(room, d.drawerId, { type: 'reroll' }).ok).toBe(true);
-    expect(room.draw.key).not.toBe(before);
   });
 
   it('skips a drawer who stays disconnected, and finishes after everyone drew', () => {
@@ -180,7 +209,8 @@ describe('그림 맞히기', () => {
     expect(room.draw.drawerId).not.toBe(first);
     let now = 11_000 + DRAW_REVEAL_MS;
     while (room.phase === 'playing') {
-      now = room.draw.stage === 'draw' ? room.draw.endsAt : room.draw.revealUntil;
+      const st = room.draw;
+      now = st.stage === 'pick' ? st.pickEndsAt : st.stage === 'draw' ? st.endsAt : st.revealUntil;
       tick(room, now);
     }
     expect(room.phase).toBe('ended');

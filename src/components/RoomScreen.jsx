@@ -61,7 +61,7 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
   }, [view.phase]);
 
   // ── 쪼기: 준비 안 한 사람 / 내 차례 아닌데 오래 고민하는(그리는) 사람 재촉 ──
-  const hasTurn = bingo || (view.game === 'drawing' && view.draw?.stage === 'draw');
+  const hasTurn = bingo || (view.game === 'drawing' && ['pick', 'draw'].includes(view.draw?.stage));
   const slowpokes = lobby
     ? me?.ready
       ? view.players.filter((p) => p.id !== myId && !p.ready && p.connected)

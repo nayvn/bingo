@@ -1366,6 +1366,11 @@ button:focus-visible {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.word-bar .word.waiting {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
 .word-bar .word.hint {
   color: var(--accent);
   letter-spacing: 4px;
