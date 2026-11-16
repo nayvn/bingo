@@ -20,6 +20,7 @@ export const choOf = (ch) => {
   const c = syllable(ch);
   return c < 0 ? ch : CHO[Math.floor(c / 588)];
 };
+export const isSyllable = (ch) => syllable(ch) >= 0;
 export const chosung = (s) => [...String(s ?? '')].map(choOf).join('');
 export const isCho = (ch) => CHO.includes(ch);
 

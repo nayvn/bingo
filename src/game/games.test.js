@@ -102,7 +102,6 @@ describe('그림 맞히기', () => {
   // 시작 → 그리는 사람이 단어를 정한 상태까지
   const start = (word = '고양이') => {
     const room = room3('drawing');
-    applyAction(room, 'a', { type: 'rounds', n: 1 }, 0);
     readyAll(room, 0);
     expect(room.draw.stage).toBe('pick');
     expect(applyAction(room, room.draw.drawerId, { type: 'pick', text: word }, 0).ok).toBe(true);
@@ -198,7 +197,7 @@ describe('그림 맞히기', () => {
     expect(d.ink).toHaveLength(0);
   });
 
-  it('skips a drawer who stays disconnected, and finishes after everyone drew', () => {
+  it('skips a drawer who stays disconnected, and keeps going until someone stops', () => {
     const room = start();
     const first = room.draw.drawerId;
     setDisconnected(room, first);
@@ -208,11 +207,19 @@ describe('그림 맞히기', () => {
     tick(room, 11_000 + DRAW_REVEAL_MS);
     expect(room.draw.drawerId).not.toBe(first);
     let now = 11_000 + DRAW_REVEAL_MS;
-    while (room.phase === 'playing') {
+    setDisconnected(room, first); // 아직 끊긴 상태
+    const seen = new Set();
+    for (let i = 0; i < 40; i++) {
       const st = room.draw;
       now = st.stage === 'pick' ? st.pickEndsAt : st.stage === 'draw' ? st.endsAt : st.revealUntil;
       tick(room, now);
+      seen.add(room.draw.drawerId);
     }
+    expect(room.phase).toBe('playing'); // 몇 바퀴를 돌아도 끝나지 않음
+    expect(seen.has(first)).toBe(false); // 끊긴 사람은 건너뜀
+    expect(room.draw.turn).toBeGreaterThan(6);
+    const other = room.players.find((p) => p.id !== first).id;
+    expect(applyAction(room, other, { type: 'stop' }, now).ok).toBe(true);
     expect(room.phase).toBe('ended');
     expect(room.winners).toEqual([]); // 아무도 못 맞힘
   });

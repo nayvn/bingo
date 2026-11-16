@@ -1,5 +1,6 @@
 import Peer from 'peerjs';
 import { autofillBoard } from '../game/autofill.js';
+import { lookupWord } from '../game/dict.js';
 import * as L from '../game/logic.js';
 import { tabStore } from './storage.js';
 
@@ -164,6 +165,12 @@ export class HostSession {
       res = { ok: true };
     } else if (action?.type === 'poke') {
       res = this._poke(conn.playerId);
+    } else if (action?.type === 'race') {
+      // 사전 확인이 끝나면 따로 응답
+      this._raceWord(conn.playerId, action.text).then((r) => {
+        if (conn.open) conn.send({ t: 'res', id, ok: r.ok, error: r.error });
+      });
+      return;
     } else {
       res = L.applyAction(this.room, conn.playerId, action);
     }
@@ -249,6 +256,24 @@ export class HostSession {
     this._ink(this.playerId, op);
   }
 
+  // 초성게임 단어: 빠른 검사 → 사전 확인 → 쌓기
+  async _raceWord(pid, text) {
+    const at = Date.now();
+    const pre = L.raceCheck(this.room, pid, text, at);
+    if (!pre.ok) return pre;
+    let found;
+    try {
+      found = await lookupWord(pre.word);
+    } catch {
+      return { ok: false, error: '사전 확인에 실패했어요. 다시 보내 주세요' };
+    }
+    if (this.destroyed) return { ok: false, error: '방이 닫혔어요' };
+    if (!found) return { ok: false, error: `'${pre.word}'은(는) 사전에 없어요` };
+    const res = L.raceAdd(this.room, pid, pre.word, found.desc, at);
+    if (res.ok) this._broadcast();
+    return res;
+  }
+
   _broadcast() {
     if (this.destroyed) return;
     this._syncDeadline();
@@ -309,6 +334,7 @@ export class HostSession {
       return Promise.resolve({ ok: true });
     }
     if (action?.type === 'poke') return Promise.resolve(this._poke(this.playerId));
+    if (action?.type === 'race') return this._raceWord(this.playerId, action.text);
     const res = L.applyAction(this.room, this.playerId, action);
     if (res.ok) this._broadcast();
     return Promise.resolve(res);

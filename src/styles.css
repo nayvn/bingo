@@ -1494,6 +1494,421 @@ button:focus-visible {
   transform: scale(0.92);
 }
 
+/* ───────── 게임 탭: 아이콘 위, 이름 아래 (5개라 좁아서) ───────── */
+.game-tabs {
+  height: 48px;
+}
+.game-tabs .tab {
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 2px;
+}
+.tab-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.tab-name {
+  font-size: 11px;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.setting-note {
+  font-size: 13px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stop-btn {
+  flex: none;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 122 138 / 0.35);
+  border-radius: 9px;
+  background: rgb(255 122 138 / 0.1);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.stop-btn:hover:not(:disabled) {
+  background: rgb(255 122 138 / 0.2);
+}
+.app:has(.game-race) .toasts,
+.app:has(.game-mines) .toasts {
+  top: auto;
+  bottom: 140px;
+}
+
+/* ───────── 초성게임 ───────── */
+.race-card {
+  padding: 14px 16px 12px;
+}
+.race-card .quiz-word span {
+  min-width: 64px;
+  height: 64px;
+  font-size: 36px;
+}
+.race-count {
+  height: 64px;
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--accent);
+  animation: count 1s ease-out both;
+}
+@keyframes count {
+  from {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.stacks {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 0.18);
+}
+.stack {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stack-blocks {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c) 6%, transparent);
+  overflow: hidden;
+}
+.block {
+  flex: 0 1 30px;
+  min-height: 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 75%, #fff 10%), color-mix(in srgb, var(--c) 55%, #000 15%));
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.18);
+  color: #15141c;
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  animation: drop 0.45s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes drop {
+  from {
+    transform: translateY(-160px);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+}
+.stack-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.stack-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stack-name b {
+  min-width: 26px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+  color: var(--c);
+  font-size: 14px;
+  text-align: center;
+}
+.stack.leading .stack-name {
+  color: var(--text);
+  font-weight: 700;
+}
+.desc-pop {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(86%, 340px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--c) 50%, transparent);
+  border-radius: 16px;
+  background: rgb(24 23 31 / 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.5);
+  text-align: center;
+  pointer-events: none;
+  animation: descPop 2.8s ease both;
+}
+.desc-pop b {
+  color: var(--c);
+  font-size: 22px;
+  font-weight: 900;
+}
+.desc-pop span {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@keyframes descPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.9);
+  }
+  8%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%);
+  }
+}
+.race-win {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: inherit;
+  background: rgb(12 12 18 / 0.78);
+  backdrop-filter: blur(4px);
+  animation: fade 0.3s ease both;
+}
+.race-win-emoji {
+  font-size: 54px;
+  animation: rise 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.race-win strong {
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+  animation: rise 0.5s 0.1s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.race-win small {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+/* ───────── 지뢰찾기 ───────── */
+.mine-race {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+.mine-runner {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 3px 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--glass);
+}
+.mine-runner.win {
+  border-color: color-mix(in srgb, var(--c) 60%, transparent);
+}
+.mine-runner .name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mine-runner .pct {
+  font-size: 11px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mine-runner .bar {
+  grid-column: 1 / -1;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--glass-2);
+  overflow: hidden;
+}
+.mine-runner .bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--c);
+  transition: width 0.3s ease;
+}
+.mine-wrap {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+.mine-board {
+  position: relative;
+  width: min(100cqw, 100cqh);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--w), 1fr);
+  grid-template-rows: repeat(var(--h), 1fr);
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--stroke-2);
+  border-radius: 16px;
+  background: rgb(0 0 0 / 0.25);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.mc {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  font-size: calc(min(100cqw, 100cqh) / var(--w) * 0.5);
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+.mc.covered {
+  background: linear-gradient(160deg, #3a3650, #2a2740);
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+.mc.covered:hover {
+  background: linear-gradient(160deg, #46415f, #322e4b);
+}
+.mine-board.flag-mode .mc.covered:hover {
+  box-shadow: inset 0 0 0 2px rgb(255 122 138 / 0.5);
+}
+.mc.open {
+  background: rgb(255 255 255 / 0.05);
+  cursor: default;
+}
+.mc.flag,
+.mc.reveal {
+  font-size: calc(min(100cqw, 100cqh) / var(--w) * 0.42);
+}
+.mc.reveal {
+  opacity: 0.6;
+}
+.mc.boom {
+  background: rgb(255 122 138 / 0.35);
+  font-size: calc(min(100cqw, 100cqh) / var(--w) * 0.45);
+}
+.mc.n1 { color: #7cc4ff; }
+.mc.n2 { color: #7ee0b8; }
+.mc.n3 { color: #ff8a8a; }
+.mc.n4 { color: #b9a6ff; }
+.mc.n5 { color: #ffb36b; }
+.mc.n6 { color: #6ee7e7; }
+.mc.n7 { color: #f0f0f5; }
+.mc.n8 { color: #9a98ad; }
+.mine-board.stunned .mc {
+  filter: grayscale(0.7) brightness(0.7);
+}
+.mine-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: inherit;
+  background: rgb(12 12 18 / 0.45);
+  pointer-events: none;
+}
+.mine-overlay b {
+  font-size: 44px;
+  font-weight: 900;
+  color: var(--accent);
+  animation: count 1s ease-out both;
+}
+.mine-overlay.stun {
+  background: rgb(80 10 20 / 0.35);
+  animation: shakeBoard 0.4s ease;
+}
+.mine-overlay.stun b {
+  color: #fff;
+  font-size: 32px;
+  animation: none;
+}
+.mine-overlay small {
+  color: #fff;
+  font-size: 13px;
+}
+@keyframes shakeBoard {
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+.mode-toggle {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: var(--glass);
+}
+.mode-toggle button {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mode-toggle button.on {
+  background: var(--btn);
+  color: var(--btn-ink);
+}
+
 /* ───────── 알림 / 결과 ───────── */
 .toasts {
   position: absolute;

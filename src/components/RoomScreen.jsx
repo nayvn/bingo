@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import BingoGame from './games/BingoGame.jsx';
 import DrawGame from './games/DrawGame.jsx';
+import MinesGame from './games/MinesGame.jsx';
 import QuizGame from './games/QuizGame.jsx';
+import RaceGame from './games/RaceGame.jsx';
 import { GAME_INFO, GAME_LIST } from './games/meta.js';
 
 const finePointer = () => window.matchMedia?.('(pointer: fine)').matches;
-const GAMES = { bingo: BingoGame, chosung: QuizGame, drawing: DrawGame };
+const GAMES = { bingo: BingoGame, chosung: QuizGame, race: RaceGame, drawing: DrawGame, mines: MinesGame };
 
 // 방 화면 뼈대: 위쪽 참가자 줄 + 게임 고르기 탭 + 게임 화면 + 결과 창
 export default function RoomScreen({ view, role, net, send, leave, toast, ink }) {
@@ -55,6 +57,8 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
     prevPhase.current = view.phase;
     if (!started) return;
     if (view.game === 'chosung') toast('🔤 초성퀴즈 시작! 먼저 맞히는 사람이 점수를 가져가요');
+    else if (view.game === 'race') toast('⚡ 3초 뒤에 초성이 나와요! 준비~');
+    else if (view.game === 'mines') toast('💣 3초 뒤에 시작! 먼저 다 찾는 사람이 이겨요');
     else if (bingo && turnPlayer)
       toast(turnPlayer.id === myId ? '🎬 이번 판은 내가 먼저 시작해요!' : `🎬 이번 판은 ${turnPlayer.name}님부터 시작해요`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,9 +103,11 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
       setShowResult(false);
       return undefined;
     }
-    const t = setTimeout(() => setShowResult(true), bingo ? 1700 : 1000);
+    // 빙고는 줄 긋기, 초성게임은 승리 발표를 먼저 보여 주고
+    const delay = { bingo: 1700, race: 2600, mines: 1800 }[view.game] ?? 1000;
+    const t = setTimeout(() => setShowResult(true), delay);
     return () => clearTimeout(t);
-  }, [ended, bingo]);
+  }, [ended, view.game]);
 
   const invite = async () => {
     const url = `${window.location.origin}${window.location.pathname}?room=${view.code}`;
@@ -129,7 +135,7 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
   };
 
   const score = (p) => (bingo ? p.lines : p.score);
-  const unit = bingo ? '줄' : '점';
+  const unit = GAME_INFO[view.game]?.unit ?? '점';
   const badge = (p) => {
     if (lobby) return <span className={`badge ${p.ready ? 'on' : ''}`}>{p.ready ? '준비' : '대기'}</span>;
     const got = view.draw?.stage === 'draw' && view.draw.guessed.includes(p.id);
@@ -154,8 +160,13 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
     resultTitle = '무승부!';
     resultText = '아무도 점수를 못 냈어요';
   } else {
+    const names = winners.map((w) => w.name).join(', ');
     resultTitle = iWon ? (winners.length > 1 ? '공동 우승!' : '우승!') : '아쉬워요!';
-    resultText = `${winners.map((w) => w.name).join(', ')}님이 ${winners[0].score}점으로 1등이에요`;
+    if (view.game === 'mines' && view.mines?.doneMs != null)
+      resultText = `${names}님이 ${(view.mines.doneMs / 1000).toFixed(1)}초 만에 지뢰를 다 찾았어요`;
+    else if (view.game === 'mines') resultText = `${names}님이 ${winners[0].score}%로 가장 많이 열었어요`;
+    else if (view.game === 'race') resultText = `${names}님이 ${winners[0].score}개로 가장 많이 썼어요`;
+    else resultText = `${names}님이 ${winners[0].score}점으로 1등이에요`;
   }
 
   const Game = GAMES[view.game] ?? BingoGame;
@@ -203,8 +214,10 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
             disabled={!lobby && view.game !== g}
             onClick={() => pickGame(g)}
           >
-            <span aria-hidden>{GAME_INFO[g].icon}</span>
-            {GAME_INFO[g].name}
+            <span className="tab-icon" aria-hidden>
+              {GAME_INFO[g].icon}
+            </span>
+            <span className="tab-name">{GAME_INFO[g].name}</span>
           </button>
         ))}
       </nav>

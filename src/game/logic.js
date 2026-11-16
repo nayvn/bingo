@@ -1,13 +1,15 @@
 // 놀이방 규칙. 방장 브라우저가 이 로직으로 방 상태를 관리하고,
 // 각 참가자에게는 viewFor()로 만든 "자기 시점" 상태만 보낸다.
-// 게임: 빙고(이 파일), 초성퀴즈(quiz.js), 그림 맞히기(draw.js)
-import { MAX_WORD, OK, clean, fail, norm } from './common.js';
+// 게임: 빙고(이 파일), 초성퀴즈(quiz.js), 초성게임(race.js), 그림 맞히기(draw.js), 지뢰찾기(mines.js)
+import { MAX_WORD, OK, clean, fail, finishByScore, norm } from './common.js';
 import * as Draw from './draw.js';
+import * as Mines from './mines.js';
 import * as Quiz from './quiz.js';
+import * as Race from './race.js';
 
 export { MAX_WORD, clean, norm };
 
-export const GAMES = ['bingo', 'chosung', 'drawing'];
+export const GAMES = ['bingo', 'chosung', 'race', 'drawing', 'mines'];
 export const N = 5;
 export const CELLS = N * N;
 export const MIN_PLAYERS = 2;
@@ -71,14 +73,14 @@ export function validateBoard(board) {
 export function createRoom(code) {
   return {
     code,
-    game: 'bingo', // bingo | chosung | drawing
+    game: 'bingo', // bingo | chosung | race | drawing | mines
     gameBy: null, // 마지막으로 게임을 바꾼 사람 id
     topic: '',
     topicBy: null,
     target: 3,
     quizCat: Quiz.QUIZ_RANDOM,
     quizRounds: 10,
-    drawRounds: 2,
+    mineLevel: 'easy',
     phase: 'lobby', // lobby | playing | ended
     players: [],
     turnId: null,
@@ -88,6 +90,8 @@ export function createRoom(code) {
     nextStarter: null, // 다음 판에 먼저 시작할 자리 번호
     quiz: null,
     draw: null,
+    race: null,
+    mines: null,
   };
 }
 
@@ -139,6 +143,12 @@ function maybeStart(room, now) {
     Quiz.startQuiz(room, now);
   } else if (room.game === 'drawing') {
     Draw.startDrawing(room, seat, now);
+  } else if (room.game === 'race') {
+    room.turnId = null;
+    Race.startRace(room, now);
+  } else if (room.game === 'mines') {
+    room.turnId = null;
+    Mines.startMines(room, now);
   } else {
     room.turnId = room.players[seat].id;
   }
@@ -164,6 +174,8 @@ function resetToLobby(room) {
   room.turnId = null;
   room.quiz = null;
   room.draw = null;
+  room.race = null;
+  room.mines = null;
   room.players.forEach((p) => {
     p.ready = false;
     p.lines = 0;
@@ -263,9 +275,30 @@ export function applyAction(room, id, action, now = Date.now()) {
       if (err) return err;
       const n = Number(action.n);
       if (room.game === 'chosung' && Quiz.QUIZ_ROUND_OPTIONS.includes(n)) room.quizRounds = n;
-      else if (room.game === 'drawing' && Draw.DRAW_ROUND_OPTIONS.includes(n)) room.drawRounds = n;
       else return fail('횟수가 올바르지 않아요');
       return OK;
+    }
+    case 'mineLevel': {
+      const err = lobbyOnly();
+      if (err) return err;
+      if (!Mines.MINE_LEVELS[action.level]) return fail('없는 난이도예요');
+      room.mineLevel = action.level;
+      return OK;
+    }
+    case 'mineProgress':
+    case 'mineDone': {
+      if (room.phase !== 'playing' || room.game !== 'mines') return fail('게임 중이 아니에요');
+      return action.type === 'mineDone' ? Mines.mineDone(room, p, now) : Mines.mineProgress(room, p, action, now);
+    }
+    case 'stop': {
+      // 끝이 정해져 있지 않은 게임은 누구든 언제든 끝낼 수 있다
+      if (room.phase !== 'playing') return fail('게임 중이 아니에요');
+      if (room.game === 'drawing') return Draw.drawStop(room, p, now);
+      if (room.game === 'mines') {
+        finishByScore(room);
+        return OK;
+      }
+      return fail('이 게임은 중간에 끝낼 수 없어요');
     }
     case 'ready': {
       const err = lobbyOnly();
@@ -332,8 +365,14 @@ export function tick(room, now = Date.now()) {
   if (room.phase !== 'playing') return false;
   if (room.game === 'chosung') return Quiz.quizTick(room, now);
   if (room.game === 'drawing') return Draw.drawTick(room, now);
+  if (room.game === 'race') return Race.raceTick(room, now);
+  if (room.game === 'mines') return Mines.minesTick(room, now);
   return false;
 }
+
+// 초성게임: 방장이 사전 확인 전후로 쓴다 (사전 확인은 비동기라 applyAction 밖에서)
+export const raceCheck = Race.raceCheck;
+export const raceAdd = Race.raceAdd;
 
 export function applyInk(room, id, op) {
   return room.game === 'drawing' ? Draw.applyInk(room, id, op) : null;
@@ -372,7 +411,7 @@ export function viewFor(room, id, now = Date.now()) {
     target: room.target,
     quizCat: room.quizCat,
     quizRounds: room.quizRounds,
-    drawRounds: room.drawRounds,
+    mineLevel: room.mineLevel,
     phase: room.phase,
     turnId: room.turnId,
     called: room.called.map((c) => ({ ...c })),
@@ -390,5 +429,7 @@ export function viewFor(room, id, now = Date.now()) {
     me: me ? { id: me.id, board: me.board ? [...me.board] : null, ready: me.ready } : null,
     quiz: room.game === 'chosung' ? Quiz.quizView(room, now) : null,
     draw: room.game === 'drawing' ? Draw.drawView(room, id, now) : null,
+    race: room.game === 'race' ? Race.raceView(room, now) : null,
+    mines: room.game === 'mines' ? Mines.minesView(room, now) : null,
   };
 }

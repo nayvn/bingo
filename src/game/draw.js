@@ -1,5 +1,5 @@
 // 그림 맞히기: 그리는 사람이 직접 단어를 정해서 그리고, 나머지가 맞힌다.
-// 그리는 사람은 돌아가며 바뀐다. 먼저 맞히면 +3, 다음은 +2 … 그린 사람도 맞힌 사람 1명당 +1.
+// 그리는 사람은 돌아가며 바뀌고, 누가 '종료'를 누를 때까지 계속 이어진다. 먼저 맞히면 +3, 다음은 +2 … 그린 사람도 맞힌 사람 1명당 +1.
 import {
   OK,
   answerKey,
@@ -19,7 +19,6 @@ export const DRAW_MS = 80_000;
 export const DRAW_REVEAL_MS = 4_000;
 // 40초가 지나면 초성, 60초가 지나면 첫 글자까지 힌트로 보여 준다
 export const DRAW_HINT_AT = [40_000, 60_000];
-export const DRAW_ROUND_OPTIONS = [1, 2, 3];
 export const MAX_DRAW_WORD = 12;
 // 그리는 사람이 연결이 끊겨도 잠깐은 기다려 준다 (새로고침 등)
 const DRAWER_GRACE_MS = 10_000;
@@ -38,22 +37,22 @@ export const letterCount = (word) => [...String(word ?? '').replace(/\s/g, '')].
 export function startDrawing(room, seat, now) {
   const ids = room.players.map((p) => p.id);
   const order = [...ids.slice(seat), ...ids.slice(0, seat)];
-  room.draw = { order, turns: order.length * room.drawRounds, turn: -1, log: [], seq: 0, ink: [] };
+  room.draw = { order, turn: -1, log: [], seq: 0, ink: [] };
   nextTurn(room, now);
 }
 
 function nextTurn(room, now) {
   const d = room.draw;
+  // 순서대로 다음 사람 (나갔거나 연결이 끊긴 사람은 건너뜀)
   let drawer = null;
-  while (!drawer) {
+  for (let k = 0; k < d.order.length && !drawer; k++) {
     d.turn += 1;
-    if (d.turn >= d.turns) {
-      d.turn = d.turns - 1;
-      finishByScore(room);
-      return;
-    }
     const p = room.players.find((x) => x.id === d.order[d.turn % d.order.length]);
     if (p?.connected) drawer = p;
+  }
+  if (!drawer) {
+    finishByScore(room);
+    return;
   }
   d.drawerId = drawer.id;
   room.turnId = drawer.id;
@@ -128,6 +127,17 @@ export function drawGuess(room, p, text, now) {
     }
   }
   pushLog(d, { kind: 'chat', by: p.id, name: p.name, text: word });
+  return OK;
+}
+
+/** 누구든 언제든 게임 끝내기 */
+export function drawStop(room, p, now) {
+  const d = room.draw;
+  if (d.word && d.stage !== 'reveal') pushLog(d, { kind: 'system', text: `정답은 '${d.word}'였어요` });
+  pushLog(d, { kind: 'system', text: `🛑 ${p.name}님이 게임을 끝냈어요` });
+  d.stage = 'reveal';
+  d.revealUntil = now;
+  finishByScore(room);
   return OK;
 }
 
@@ -221,7 +231,6 @@ export function drawView(room, id, now) {
   if (live && stage === 'draw') timeLeft = Math.max(0, d.endsAt - now);
   return {
     turn: d.turn + 1,
-    turns: d.turns,
     drawerId: d.drawerId,
     stage, // pick | draw | reveal
     // 단어는 그리는 사람에게만 (다 끝나면 모두에게)

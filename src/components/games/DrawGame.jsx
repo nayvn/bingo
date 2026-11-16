@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { pickOne } from '../../game/common.js';
-import { DRAW_ROUND_OPTIONS, ERASER_SIZE, MAX_DRAW_WORD, PALETTE, PAPER, SIZES } from '../../game/draw.js';
+import { ERASER_SIZE, MAX_DRAW_WORD, PALETTE, PAPER, SIZES } from '../../game/draw.js';
 import { DRAW_WORDS } from '../../game/words.js';
 import DrawCanvas from '../DrawCanvas.jsx';
 import { TimeBar, Timer, useCountdown } from '../useCountdown.jsx';
-import { Feed, GameLobby, GuessBar, Select } from './parts.jsx';
+import { Feed, GameLobby, GuessBar } from './parts.jsx';
 
 const RULES = [
   '내 차례가 오면 그릴 단어를 직접 정해요 (20초, 안 정하면 랜덤)',
   '다른 사람은 글자 수만 보고 그림을 맞혀요 · 한 번에 80초',
+  '돌아가면서 계속 그려요 · 누구든 종료를 누르면 끝',
   '먼저 맞히면 +3점, 다음 사람은 +2점',
   '그린 사람도 맞힌 사람 1명당 +1점 · 40초 뒤엔 초성 힌트',
 ];
@@ -91,14 +92,7 @@ export default function DrawGame(props) {
         icon="🎨"
         title="그림 맞히기"
         rules={RULES}
-        settings={
-          <Select
-            label="그리기"
-            value={view.drawRounds}
-            options={DRAW_ROUND_OPTIONS.map((n) => [n, `한 사람당 ${n}번`])}
-            onChange={(n) => send({ type: 'rounds', n: Number(n) })}
-          />
-        }
+        settings={<span className="setting-note">🔁 라운드 제한 없이, 누가 종료할 때까지 계속 이어져요</span>}
       />
     );
   }
@@ -111,6 +105,9 @@ export default function DrawGame(props) {
     if (!res.ok) toast(res.error);
   };
   const pick = (text) => run({ type: 'pick', text });
+  const stop = () => {
+    if (window.confirm('게임을 끝낼까요? 지금까지 점수로 순위가 정해져요')) run({ type: 'stop' });
+  };
 
   let word;
   if (picking) {
@@ -218,11 +215,14 @@ export default function DrawGame(props) {
     <>
       <div className={`topic-row word-bar ${isDrawer && (drawing || picking) ? 'mine' : ''}`}>
         {word}
-        <span className="word-turn">
-          {d.turn}/{d.turns}
-        </span>
+        <span className="word-turn">{d.turn}번째</span>
         {drawing && <Timer seconds={secondsLeft} soon={20} urgent={10} />}
         {picking && <Timer seconds={secondsLeft} soon={10} urgent={5} />}
+        {playing && (
+          <button className="stop-btn" disabled={busy} onClick={stop} title="게임 끝내기">
+            종료
+          </button>
+        )}
       </div>
       <TimeBar msLeft={drawing || picking ? msLeft : 0} total={d.roundMs} />
 
