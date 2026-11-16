@@ -14,7 +14,7 @@ import {
 import { DRAW_WORDS } from './words.js';
 
 // 단어 정하는 시간. 안 정하면 랜덤 단어로 시작
-export const DRAW_PICK_MS = 20_000;
+export const DRAW_PICK_MS = 40_000;
 export const DRAW_MS = 80_000;
 export const DRAW_REVEAL_MS = 4_000;
 // 40초가 지나면 초성, 60초가 지나면 첫 글자까지 힌트로 보여 준다

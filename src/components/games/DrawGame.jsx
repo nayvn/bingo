@@ -7,7 +7,7 @@ import { TimeBar, Timer, useCountdown } from '../useCountdown.jsx';
 import { Feed, GameLobby, GuessBar } from './parts.jsx';
 
 const RULES = [
-  '내 차례가 오면 그릴 단어를 직접 정해요 (20초, 안 정하면 랜덤)',
+  '내 차례가 오면 그릴 단어를 직접 정해요 (40초, 안 정하면 랜덤)',
   '다른 사람은 글자 수만 보고 그림을 맞혀요 · 한 번에 80초',
   '돌아가면서 계속 그려요 · 누구든 종료를 누르면 끝',
   '먼저 맞히면 +3점, 다음 사람은 +2점',
