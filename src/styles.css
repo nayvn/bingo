@@ -304,9 +304,15 @@ button:focus-visible {
 }
 .loading {
   flex: 1;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
   color: var(--text-soft);
+}
+.loading p {
+  margin: 0;
 }
 
 /* ───────── 방 화면 ───────── */
@@ -977,6 +983,8 @@ button:focus-visible {
 
 .game-chips {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
   margin: 2px 0 14px;
   padding: 0;

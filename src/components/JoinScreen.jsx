@@ -55,7 +55,9 @@ export default function JoinScreen({ busy, error, onCreate, onJoin }) {
       <ul className="game-chips" aria-label="할 수 있는 게임">
         <li>🎯 빙고</li>
         <li>🔤 초성퀴즈</li>
+        <li>⚡ 초성게임</li>
         <li>🎨 그림맞히기</li>
+        <li>💣 지뢰찾기</li>
       </ul>
 
       <div className="join-card">

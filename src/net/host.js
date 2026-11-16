@@ -32,6 +32,18 @@ export function peerErrorText(err) {
   }
 }
 
+// 저장해 둔 방이 깨졌거나(예전 버전 등) 내가 없는 방이면 버리고 새로 연다
+function safeRestore(saved, playerId) {
+  try {
+    const room = L.restoreRoom(saved);
+    if (!room.code || !room.players.some((p) => p.id === playerId)) return null;
+    L.viewFor(room, playerId);
+    return room;
+  } catch {
+    return null;
+  }
+}
+
 // 방장: 방 상태를 들고 있고, 참가자들의 요청을 받아 규칙대로 처리한 뒤 상태를 뿌린다.
 export class HostSession {
   constructor({ playerId, name, code, savedRoom, on }) {
@@ -39,8 +51,9 @@ export class HostSession {
     this.playerId = playerId;
     this.name = name;
     this.on = on;
-    this.fresh = !savedRoom;
-    this.room = savedRoom ? L.restoreRoom(savedRoom) : L.createRoom(code);
+    this.room = savedRoom ? safeRestore(savedRoom, playerId) : null;
+    this.fresh = !this.room;
+    if (!this.room) this.room = L.createRoom(savedRoom?.code ?? code);
     this.code = this.room.code;
     this.conns = new Map(); // playerId -> DataConnection
     this.timers = new Map();

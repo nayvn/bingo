@@ -84,6 +84,17 @@ export function useBingo() {
   }, []);
   const ink = useMemo(() => ({ store: inkRef.current, send: sendInk }), [sendInk]);
 
+  // 방에 들어왔는데 내 정보가 끝내 안 오면, 멈춰 있지 말고 처음 화면으로
+  const hasMe = !!view?.me;
+  useEffect(() => {
+    if (screen !== 'room' || hasMe) return undefined;
+    const t = setTimeout(() => {
+      sessionRef.current?.destroy();
+      reset('방 정보를 받지 못했어요. 다시 들어가 주세요');
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [screen, hasMe, reset]);
+
   // 새로고침해도 같은 방으로 돌아가기
   const resumed = useRef(false);
   useEffect(() => {

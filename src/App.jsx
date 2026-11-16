@@ -20,7 +20,12 @@ export default function App() {
           ink={bingo.ink}
         />
       ) : inRoom ? (
-        <div className="loading">방에 들어가는 중…</div>
+        <div className="loading">
+          <p>방에 들어가는 중…</p>
+          <button className="btn ghost" onClick={bingo.leave}>
+            처음으로
+          </button>
+        </div>
       ) : (
         <JoinScreen
           busy={bingo.screen === 'connecting'}
