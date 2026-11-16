@@ -131,6 +131,20 @@ describe('지뢰찾기', () => {
     expect(applyAction(room, 'b', { type: 'mineDone' }, 9100).ok).toBe(false); // 이미 끝남
   });
 
+  it('can be played alone, but other games still need two', () => {
+    const room = createRoom('SOLO');
+    joinPlayer(room, 'a', 'A', 0);
+    applyAction(room, 'a', { type: 'ready' }, 0);
+    expect(room.phase).toBe('lobby'); // 빙고는 혼자 못 함
+    applyAction(room, 'a', { type: 'game', game: 'mines' }, 0);
+    applyAction(room, 'a', { type: 'ready' }, 0);
+    expect(room.phase).toBe('playing');
+    tick(room, 3000);
+    expect(applyAction(room, 'a', { type: 'mineDone' }, 12000).ok).toBe(true);
+    expect(room.winners).toEqual(['a']);
+    expect(room.mines.doneMs).toBe(9000);
+  });
+
   it('can be stopped by anyone', () => {
     const room = start('mines');
     tick(room, 3000);

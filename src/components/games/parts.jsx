@@ -1,6 +1,6 @@
 // 초성퀴즈와 그림 맞히기가 같이 쓰는 화면 조각들
 import { useEffect, useRef, useState } from 'react';
-import { MAX_WORD, MIN_PLAYERS } from '../../game/logic.js';
+import { MAX_WORD, minPlayersFor } from '../../game/logic.js';
 
 // 채팅/정답 기록. 새 줄이 오면 맨 아래로
 export function Feed({ log, colorOf, empty, compact = false }) {
@@ -75,9 +75,9 @@ export function GuessBar({ onSend, placeholder, disabled = false, extra = null, 
 }
 
 // 초성퀴즈·그림 맞히기 대기실: 설정 + 규칙 + 준비 버튼
-export function GameLobby({ icon, title, rules, settings, view, me, run, busy, net }) {
+export function GameLobby({ icon, title, rules, settings, view, me, run, busy, net, readyText = '준비 완료' }) {
   const readyCount = view.players.filter((p) => p.ready).length;
-  const waiting = view.players.length < MIN_PLAYERS;
+  const waiting = view.players.length < minPlayersFor(view.game);
   return (
     <>
       <div className="topic-row setup">{settings}</div>
@@ -112,7 +112,7 @@ export function GameLobby({ icon, title, rules, settings, view, me, run, busy, n
             disabled={busy}
             onClick={() => run({ type: me?.ready ? 'unready' : 'ready' })}
           >
-            {me?.ready ? '준비 취소' : '준비 완료'}
+            {me?.ready ? '준비 취소' : readyText}
           </button>
         </div>
       </footer>

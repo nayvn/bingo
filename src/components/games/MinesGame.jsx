@@ -9,6 +9,7 @@ const RULES = [
   '지뢰가 아닌 칸을 먼저 다 연 사람이 승리!',
   '숫자는 주변 8칸의 지뢰 수 · 깃발: 우클릭 / 길게 누르기 / 🚩 모드',
   '지뢰를 밟으면 3초 동안 기절 (게임은 계속)',
+  '혼자서도 OK! 혼자면 기록 도전이에요',
 ];
 const LONG_PRESS_MS = 380;
 const PROGRESS_EVERY_MS = 250;
@@ -22,8 +23,9 @@ export default function MinesGame(props) {
       <GameLobby
         {...props}
         icon="💣"
-        title="지뢰찾기 대결"
+        title={view.players.length === 1 ? '지뢰찾기' : '지뢰찾기 대결'}
         rules={RULES}
+        readyText={view.players.length === 1 ? '혼자 시작' : '준비 완료'}
         settings={
           <Select
             label="난이도"
@@ -203,7 +205,8 @@ function MinesBoard({ view, myId, send, run, busy, g, colorOf }) {
   };
 
   const stop = () => {
-    if (window.confirm('게임을 끝낼까요? 지금까지 연 칸 비율로 순위가 정해져요')) run({ type: 'stop' });
+    const msg = view.players.length === 1 ? '그만할까요?' : '게임을 끝낼까요? 지금까지 연 칸 비율로 순위가 정해져요';
+    if (window.confirm(msg)) run({ type: 'stop' });
   };
 
   const left = g.count - (s ? s.flags.size + s.boomed.size : 0);

@@ -13,6 +13,8 @@ export const GAMES = ['bingo', 'chosung', 'race', 'drawing', 'mines'];
 export const N = 5;
 export const CELLS = N * N;
 export const MIN_PLAYERS = 2;
+// 지뢰찾기는 혼자서도 (기록 도전)
+export const minPlayersFor = (game) => (game === 'mines' ? 1 : MIN_PLAYERS);
 export const MAX_PLAYERS = 3;
 export const MAX_TOPIC = 30;
 export const MAX_NAME = 10;
@@ -124,7 +126,7 @@ function nextTurn(room) {
 
 function maybeStart(room, now) {
   if (room.phase !== 'lobby') return;
-  if (room.players.length < MIN_PLAYERS) return;
+  if (room.players.length < minPlayersFor(room.game)) return;
   if (!room.players.every((p) => p.ready && p.connected)) return;
   room.phase = 'playing';
   room.deadline = null;
@@ -220,7 +222,7 @@ export function removePlayer(room, id, now = Date.now()) {
   if (bingoTurn && room.turnId === id) room.turnId = room.players[0]?.id ?? null;
 
   let notice = `${p.name}님이 나갔어요`;
-  if (room.phase === 'playing' && room.players.length < MIN_PLAYERS) {
+  if (room.phase === 'playing' && room.players.length < minPlayersFor(room.game)) {
     resetToLobby(room);
     notice += ' · 인원이 부족해 대기실로 돌아왔어요';
   }

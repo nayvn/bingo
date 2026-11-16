@@ -5,6 +5,8 @@ import MinesGame from './games/MinesGame.jsx';
 import QuizGame from './games/QuizGame.jsx';
 import RaceGame from './games/RaceGame.jsx';
 import { GAME_INFO, GAME_LIST } from './games/meta.js';
+import { MINE_LEVELS } from '../game/mines.js';
+import { deviceStore } from '../net/storage.js';
 
 const finePointer = () => window.matchMedia?.('(pointer: fine)').matches;
 const GAMES = { bingo: BingoGame, chosung: QuizGame, race: RaceGame, drawing: DrawGame, mines: MinesGame };
@@ -58,7 +60,8 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
     if (!started) return;
     if (view.game === 'chosung') toast('🔤 초성퀴즈 시작! 먼저 맞히는 사람이 점수를 가져가요');
     else if (view.game === 'race') toast('⚡ 3초 뒤에 초성이 나와요! 준비~');
-    else if (view.game === 'mines') toast('💣 3초 뒤에 시작! 먼저 다 찾는 사람이 이겨요');
+    else if (view.game === 'mines')
+      toast(view.players.length === 1 ? '💣 3초 뒤에 시작! 최대한 빨리 다 찾아봐요' : '💣 3초 뒤에 시작! 먼저 다 찾는 사람이 이겨요');
     else if (bingo && turnPlayer)
       toast(turnPlayer.id === myId ? '🎬 이번 판은 내가 먼저 시작해요!' : `🎬 이번 판은 ${turnPlayer.name}님부터 시작해요`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,6 +79,25 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
     const t = setTimeout(() => setShowResult(true), delay);
     return () => clearTimeout(t);
   }, [ended, view.game]);
+
+  // ── 혼자 지뢰찾기: 난이도별 최고 기록 (이 기기에만 저장) ──
+  const [best, setBest] = useState(null);
+  const soloEnd = ended && view.game === 'mines' && view.players.length === 1 && view.mines;
+  const runKey = soloEnd ? `${view.mines.level}.${view.mines.playAt}` : null;
+  useEffect(() => {
+    if (!runKey) return;
+    const key = `mines.best.${view.mines.level}`;
+    const rec = deviceStore.get(key);
+    const ms = view.mines.doneMs;
+    // 같은 판을 다시 열어도(새로고침) 새 기록으로 두 번 세지 않게
+    if (ms != null && rec?.run !== runKey && (!rec?.ms || ms < rec.ms)) {
+      deviceStore.set(key, { ms, run: runKey });
+      setBest({ ms, isNew: true });
+    } else {
+      setBest(rec?.ms ? { ms: rec.ms, isNew: rec.run === runKey } : null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runKey]);
 
   const invite = async () => {
     const url = `${window.location.origin}${window.location.pathname}?room=${view.code}`;
@@ -121,7 +143,16 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
   const ranking = [...view.players].sort((a, b) => score(b) - score(a));
   let resultTitle;
   let resultText;
-  if (bingo) {
+  const soloMines = view.game === 'mines' && view.players.length === 1;
+  if (soloMines) {
+    const ms = view.mines?.doneMs;
+    const lv = MINE_LEVELS[view.mines?.level]?.name ?? '';
+    resultTitle = ms != null ? '클리어!' : '아쉬워요!';
+    resultText =
+      ms != null
+        ? `${lv} ${(ms / 1000).toFixed(1)}초${best?.isNew ? ' · 🏅 최고 기록!' : best?.ms ? ` · 최고 ${(best.ms / 1000).toFixed(1)}초` : ''}`
+        : `${me?.score ?? 0}%까지 열었어요${best?.ms ? ` · ${lv} 최고 ${(best.ms / 1000).toFixed(1)}초` : ''}`;
+  } else if (bingo) {
     resultTitle = iWon ? (winners.length > 1 ? '공동 우승!' : '빙고! 우승!') : '아쉬워요!';
     resultText = `${winners.map((w) => w.name).join(', ')}님이 ${view.target}줄 빙고를 먼저 완성했어요`;
   } else if (!winners.length) {
@@ -222,7 +253,7 @@ export default function RoomScreen({ view, role, net, send, leave, toast, ink })
       {ended && showResult && (
         <div className="overlay" onClick={() => setShowResult(false)}>
           <div className="result" onClick={(e) => e.stopPropagation()}>
-            <div className="result-emoji">{iWon ? '🎉' : winners.length ? '🥲' : '🤝'}</div>
+            <div className="result-emoji">{soloMines ? (view.mines?.doneMs != null ? '🎉' : '🥲') : iWon ? '🎉' : winners.length ? '🥲' : '🤝'}</div>
             <h2>{resultTitle}</h2>
             <p>{resultText}</p>
             <ol className="ranking">
