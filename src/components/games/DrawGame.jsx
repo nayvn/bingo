@@ -63,6 +63,7 @@ export default function DrawGame(props) {
   const { msLeft, secondsLeft } = useCountdown(d?.timeLeft ?? null, view);
   const [color, setColor] = useState(PALETTE[0]);
   const [size, setSize] = useState(SIZES[1]);
+  const [fill, setFill] = useState(false);
   const eraser = color === PAPER;
 
   // 그림판이 비었는지 (안내 문구용)
@@ -170,10 +171,11 @@ export default function DrawGame(props) {
           {SIZES.map((s) => (
             <button
               key={s}
-              className={`size ${!eraser && s === size ? 'on' : ''}`}
+              className={`size ${!eraser && !fill && s === size ? 'on' : ''}`}
               aria-label={`굵기 ${s}`}
               onClick={() => {
                 setSize(s);
+                setFill(false);
                 if (eraser) setColor(PALETTE[0]);
               }}
             >
@@ -181,9 +183,23 @@ export default function DrawGame(props) {
             </button>
           ))}
           <button
-            className={`tool ${eraser ? 'on' : ''}`}
+            className={`tool ${fill ? 'on' : ''}`}
+            title="채우기"
+            onClick={() => {
+              setFill(true);
+              if (eraser) {
+                setColor(PALETTE[0]);
+                setSize(SIZES[1]);
+              }
+            }}
+          >
+            🪣
+          </button>
+          <button
+            className={`tool ${eraser && !fill ? 'on' : ''}`}
             title="지우개"
             onClick={() => {
+              setFill(false);
               setColor(PAPER);
               setSize(ERASER_SIZE);
             }}
@@ -226,7 +242,7 @@ export default function DrawGame(props) {
       <TimeBar msLeft={drawing || picking ? msLeft : 0} total={d.roundMs} />
 
       <div className="canvas-wrap">
-        <DrawCanvas store={ink.store} canDraw={drawing && isDrawer} color={color} size={size} onOp={ink.send} />
+        <DrawCanvas store={ink.store} canDraw={drawing && isDrawer} color={color} size={size} fill={fill} onOp={ink.send} />
         {drawing && isDrawer && blank && <p className="canvas-hint">여기에 그려요 ✏️</p>}
         {picking && (
           <p className="canvas-hint">{isDrawer ? '단어를 정하면 그릴 수 있어요' : '곧 그림이 시작돼요 👀'}</p>

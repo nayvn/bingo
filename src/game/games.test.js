@@ -195,6 +195,12 @@ describe('그림 맞히기', () => {
     expect(d.ink.map((x) => x.s)).toEqual([1, 1]);
     applyInk(room, d.drawerId, { key: d.key, clear: true });
     expect(d.ink).toHaveLength(0);
+    // 채우기: 점 하나만, 굵기는 무시
+    const fill = (p) => ({ key: d.key, seg: { s: 3, c: PALETTE[2], w: 99, f: 1, p } });
+    expect(applyInk(room, d.drawerId, fill([500.4, 300])).seg).toEqual({ s: 3, c: PALETTE[2], w: 0, f: 1, p: [500, 300] });
+    expect(applyInk(room, d.drawerId, fill([1, 2, 3, 4]))).toBeNull();
+    applyInk(room, d.drawerId, { key: d.key, undo: true });
+    expect(d.ink).toHaveLength(0);
   });
 
   it('skips a drawer who stays disconnected, and keeps going until someone stops', () => {

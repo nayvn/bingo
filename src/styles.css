@@ -1321,6 +1321,9 @@ button:focus-visible {
 .draw-canvas.can-draw {
   cursor: crosshair;
 }
+.draw-canvas.can-draw.fill {
+  cursor: cell;
+}
 .canvas-hint {
   position: absolute;
   margin: 0;

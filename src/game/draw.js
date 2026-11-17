@@ -211,6 +211,14 @@ export function applyInk(room, id, op) {
   const seg = op.seg;
   if (!seg || !Number.isInteger(seg.s) || d.ink.length >= MAX_SEGS) return null;
   if (!(PALETTE.includes(seg.c) || seg.c === PAPER)) return null;
+  // 채우기: 한 점을 누르면 그 자리와 이어진 같은 색 영역을 칠한다
+  if (seg.f) {
+    const p = seg.p;
+    if (!Array.isArray(p) || p.length !== 2 || !p.every(validPoint)) return null;
+    const fill = { s: seg.s, c: seg.c, w: 0, f: 1, p: p.map(Math.round) };
+    d.ink.push(fill);
+    return { key: d.key, seg: fill };
+  }
   if (!(SIZES.includes(seg.w) || seg.w === ERASER_SIZE)) return null;
   const p = seg.p;
   if (!Array.isArray(p) || p.length < 2 || p.length % 2 || p.length > MAX_POINTS * 2 || !p.every(validPoint)) return null;
