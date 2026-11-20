@@ -247,7 +247,7 @@ function MinesBoard({ view, myId, send, run, busy, g, colorOf }) {
 
       <div className="mine-wrap">
         <div
-          className={`mine-board ${stunned ? 'stunned' : ''} ${flagMode ? 'flag-mode' : ''}`}
+          className={`mine-board ${stunned ? 'stunned' : ''} ${flagMode ? 'flag-mode' : ''} ${g.w >= 16 ? 'dense' : ''}`}
           style={{ '--w': g.w, '--h': g.h }}
           onContextMenu={(e) => e.preventDefault()}
         >

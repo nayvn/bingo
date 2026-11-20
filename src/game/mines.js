@@ -7,6 +7,8 @@ export const MINE_LEVELS = {
   easy: { name: '쉬움', w: 9, h: 9, m: 10 },
   normal: { name: '보통', w: 12, h: 12, m: 24 },
   hard: { name: '어려움', w: 14, h: 14, m: 38 },
+  expert: { name: '매우 어려움', w: 16, h: 16, m: 52 },
+  hell: { name: '지옥', w: 18, h: 18, m: 74 },
 };
 export const MINE_COUNT_MS = 3_000;
 export const MINE_STUN_MS = 3_000;
